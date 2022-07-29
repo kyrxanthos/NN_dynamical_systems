@@ -3,12 +3,12 @@ m:200
 dim:2
 bounds0:1.6
 bounds1:4
-n_x:6
-n_y:15
-batch_n:90
+n_x:10
+n_y:20
+batch_n:200
 epochs:10000
 tol:0.001
-activation:<function cos at 0x7fb584063560>
+activation:<function cos at 0x7ff025608560>
 train_params:True
 opt:dam
 lr:0.03

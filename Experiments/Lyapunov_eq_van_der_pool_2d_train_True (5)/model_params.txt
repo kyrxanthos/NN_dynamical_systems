@@ -6,12 +6,12 @@ bounds1:4
 n_x:10
 n_y:20
 batch_n:200
-epochs:10000
-tol:0.001
-activation:relu
+epochs:5000
+tol:0.1
+activation:elu
 train_params:True
 opt:dam
-lr:0.001
+lr:0.01
 use_true_equation:True
 dt:0.01
 init0:0

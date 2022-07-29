@@ -18,19 +18,19 @@ if __name__ == "__main__":
         dim = 2
         bounds = [1.6, 4]
         n_x = 10
-        n_y = 20
+        n_y = 30
         batch_n = n_x*n_y
         buff = None
-        epochs = 2000
-        tol = 1e-3
-        act = tf.math.cos
-        # act = 'relu'
+        epochs = 5000
+        tol = 1e-1
+        # act = tf.math.cos
+        act = 'elu'
         train = True
         if not train:
             lr = m * 0.1
             opt = tf.keras.optimizers.SGD(learning_rate=lr, nesterov=True)
         else:
-            lr = 0.03
+            lr = 0.01
             opt = tf.keras.optimizers.Adam(lr)
         use_true_equation = True
         # time series hyperparameters
@@ -100,11 +100,11 @@ if __name__ == "__main__":
         results = {'all_loss_values': all_loss_values, 'all_test_loss_values': all_test_loss_values,
                         'Zp': Zp, 'Ze': Ze}
         
-        pd.DataFrame.from_dict(data=results).to_csv(path +'/results.csv', header=False)
+        pd.DataFrame.from_dict(data=results, orient='index').to_csv(path +'/results.csv', header=False)
         
 
         # # shell script that crops all plots
-        # subprocess.call(['sh', './crop_plots.sh'])
+        # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
 
     except KeyboardInterrupt:
         import shutil
