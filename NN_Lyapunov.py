@@ -88,11 +88,12 @@ class LyapunovModel(tf.keras.Model):
                 mlv = tf.reduce_max([mlv, loss_value], axis =0)
                 # terminate if L_infty error is sufficiently small
                 if mlv < tol:
+                    print('Reached minimum tolerance')
                     break
 
             for _, (x_test, vf_test) in enumerate(validation_dataest):
                 test_loss = self.test_step(x_test, vf_test)
-                all_test_loss_values.append(test_loss)
+                all_test_loss_values.append(test_loss.numpy())
             
             
 
