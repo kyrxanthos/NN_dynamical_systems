@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 import os 
+from mpl_toolkits.mplot3d import Axes3D
 # checking if the directory demo_folder 
 # exist or not.
 if not os.path.exists("Plots"):
@@ -88,7 +89,7 @@ class LyapunovModel(tf.keras.Model):
                 mlv = tf.reduce_max([mlv, loss_value], axis =0)
                 # terminate if L_infty error is sufficiently small
                 if mlv < tol:
-                    print('Reached minimum tolerance')
+                    # print('Reached minimum tolerance')
                     break
 
             for _, (x_test, vf_test) in enumerate(validation_dataest):
@@ -115,27 +116,52 @@ class build_lyapunov():
         if not os.path.exists(path + "/Plots"):
             os.makedirs(path + "/Plots")
 
-    def create_dataset(self, n_x, n_y, dim, bounds, batch_n, buff = None, train = True, plot=False):
-        if train == True:
-            x = np.linspace(-bounds[0], bounds[0], n_x)
-            y = np.linspace(-bounds[1], bounds[1], n_y)
-        else:
-            x = np.random.uniform(-bounds[0], bounds[0], n_x)
-            y = np.random.uniform(-bounds[1], bounds[1], n_y)
-        X, Y = np.meshgrid(x, y)
-        s = X.shape
-        data = np.zeros((n_x*n_y,dim)) 
+    def create_dataset(self, n, dim, bounds, batch_n, buff = None, train = True, plot=False):
 
-        # convert mesh into point vector for which the model can be evaluated
-        c = 0
-        for i in range(s[0]):
-            for j in range(s[1]):
-                data[c,0] = X[i,j]
-                data[c,1] = Y[i,j]
-                c = c+1;
-        data_points = tf.constant(data, tf.float32) # (n_y, dim)
+        if dim == 2:
+            if train == True:
+                x = np.linspace(-bounds[0], bounds[0], n[0])
+                y = np.linspace(-bounds[1], bounds[1], n[1])
+            else:
+                x = np.random.uniform(-bounds[0], bounds[0], n[0])
+                y = np.random.uniform(-bounds[1], bounds[1], n[1])
+            X, Y = np.meshgrid(x, y)
+            s = X.shape
+            data = np.zeros((n[0]*n[1],dim)) 
+
+            # convert mesh into point vector for which the model can be evaluated
+            c = 0
+            for i in range(s[0]):
+                for j in range(s[1]):
+                    data[c,0] = X[i,j]
+                    data[c,1] = Y[i,j]
+                    c = c+1;
+        elif dim == 3:
+                if train == True:
+                    x = np.linspace(-bounds[0], bounds[0], n[0])
+                    y = np.linspace(-bounds[1], bounds[1], n[1])
+                    z = np.linspace(-bounds[2], bounds[2], n[2])
+                else:
+                    x = np.random.uniform(-bounds[0], bounds[0], n[0])
+                    y = np.random.uniform(-bounds[1], bounds[1], n[1])
+                    z = np.random.uniform(-bounds[1], bounds[1], n[2])
+                X, Y, Z = np.meshgrid(x, y, z)
+                s = X.shape
+                data = np.zeros((n[0]*n[1]*n[2],dim)) 
+
+                # convert mesh into point vector for which the model can be evaluated
+                c = 0
+                for i in range(s[0]):
+                    for j in range(s[1]):
+                        for k in range(s[2]):
+                            data[c,0] = X[i,j,k]
+                            data[c,1] = Y[i,j,k]
+                            data[c,2] = Z[i,j,k]
+                            c = c+1;
+            
+        data_points = tf.constant(data, tf.float32) # (n[1], dim)
                         
-        input_RHS =  tf.transpose(tf.convert_to_tensor(self.func(data_points), dtype=tf.float32))  # (n_y, dim)
+        input_RHS =  tf.transpose(tf.convert_to_tensor(self.func(data_points), dtype=tf.float32))  # (n[1], dim)
 
         dataset_raw = tf.data.Dataset.from_tensor_slices((data_points, input_RHS))
         if buff:
@@ -254,7 +280,7 @@ class build_lyapunov():
 
         Ze = np.zeros(s)
         Zp = np.zeros(s)
-        DT = np.zeros((numpoints**2,self.dim))
+        DT = np.zeros((numpoints**self.dim,self.dim))
 
         # convert mesh into point vector for which the model can be evaluated
         c = 0
@@ -266,7 +292,7 @@ class build_lyapunov():
 
         # evaluate model (= Lyapunov function values V)
         Ep = self.model.predict(DT)
-        intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
+        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
 
 
         # convert point vector to tensor for evaluating x-derivative
@@ -324,6 +350,101 @@ class build_lyapunov():
         plt.xlabel('x1')
         plt.ylabel('x2')
         plt.savefig(self.path + '/Plots/vanpol2_m_{}.pdf'.format(self.m))
+
+        # plt.show()
+        return Zp, Ze
+
+    def plot_3dsolution(self, numpoints):
+        ###### plot result ######
+
+        # define plotting range and mesh
+        x = np.linspace(-self.bounds[0], self.bounds[0], numpoints)
+        y = np.linspace(-self.bounds[1], self.bounds[1], numpoints)
+        z = np.linspace(-self.bounds[2], self.bounds[2], numpoints)
+
+        X, Y, Z = np.meshgrid(x, y, z)
+
+        s = X.shape
+
+        Ze = np.zeros(s)
+        Zp = np.zeros(s)
+        DT = np.zeros((numpoints**self.dim,self.dim))
+
+        # convert mesh into point vector for which the model can be evaluated
+        c = 0
+        for i in range(s[0]):
+            for j in range(s[1]):
+                for k in range(s[2]):
+                    DT[c,0] = X[i,j,k]
+                    DT[c,1] = Y[i,j,k]
+                    DT[c,2] = Z[i,j,k]
+                    c = c+1;
+
+        # evaluate model (= Lyapunov function values V)
+        Ep = self.model.predict(DT)
+        print('Ep shape: {}'.format(Ep.shape))
+
+        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
+
+
+        # convert point vector to tensor for evaluating x-derivative
+        tDT = tf.convert_to_tensor(DT, dtype=tf.float32)
+
+        # evaluate gradients DV of Lyapunov function
+        with tf.GradientTape() as tape:
+            tape.watch(tDT)
+            ypm = self.model(tDT)
+            grads = tape.gradient(ypm, tDT)
+
+        # compute orbital derivative DVf
+        Ee = tf.math.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(DT), dtype=tf.float32)), axis=1)
+
+        # copy V and DVf values into plottable format
+        c = 0
+        for i in range(s[0]):
+            for j in range(s[1]):
+                for k in range(s[2]):
+                    Ze[i,j,k] = Ee[c]
+                    Zp[i,j,k] = Ep[c]
+                    c = c+1;
+
+
+        # # define vector field for plot
+        # new_vf = np.reshape(np.array(self.func(DT)), (self.dim, numpoints, numpoints))
+
+        # define figure
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
+        # ax.clabel(cset, fontsize=9, inline=1)
+
+        # plt.show()
+
+        fig = plt.figure(figsize=(8,8))
+        ax = plt.axes(projection='3d')
+
+        # ax.set_title('m = {}'.format(m))
+        ax.set_xlabel('x1')
+        ax.set_ylabel('x2')
+        ax.set_zlabel('x3');
+        print('zp is {}'.format(Zp.shape))
+
+        # # plot values V
+        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        #                 cmap='viridis', edgecolor='none')
+
+        # my_z = np.reshape(Zp, )
+        ax.contour(X, Y, Z)
+
+        # # plot orbital derivative DVf
+        # ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
+
+        # change angles to see graph more clearly
+        # ax.view_init(-140, 60)
+        ax.view_init(10, 60)
+
+        plt.savefig(self.path + '/Plots/van_3dplot_m_{}.pdf'.format(self.m))
+        # plt.show()
 
         # plt.show()
         return Zp, Ze

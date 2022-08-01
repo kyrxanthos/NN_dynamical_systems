@@ -1,0 +1,19 @@
+eq:giesl_2d
+m:200
+dim:2
+bounds0:1.6
+bounds1:4
+n_x:10
+n_y:30
+batch_n:300
+epochs:5000
+tol:0.1
+activation:<function cos at 0x7ff48300a560>
+train_params:False
+opt:SGD
+lr:20.0
+use_true_equation:True
+dt:0.01
+init0:0
+init1:2
+t_end:20

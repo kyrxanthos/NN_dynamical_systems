@@ -35,11 +35,28 @@ def get_equation(equation = 'van_der_pool_2d'):
             return y
     
     elif equation == 'giesl_2d':
+        # meshless collocation paper example 4.3
         def vf(x):
             x1 = x[:,0]
             x2 = x[:,1]
             y = [-x1 - 2*x2 +x1**3, -x2 + 0.5* x1**2 * x2 + x1**3]
-    
+            return y
+
+    elif equation == 'kevin_3d':
+        # Kevin paper equation 30
+        def vf(x):
+            x1 = x[:,0]
+            x2 = x[:,1]
+            x3 = x[:,2]
+            y1 = x1 * (x1**2 + x2**2 -1) -x2*(x3**2 + 1)
+            y2 = x2 * (x1**2 + x2**2 -1) -x1*(x3**2 + 1)
+            y3 = 10 * x3 * (x3**2 - 1)
+            y = [y1, y2, y3]
+            return y
+
+
+
+
     elif equation == 'complicated_10d':
         def vf(x):
             y = [

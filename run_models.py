@@ -14,18 +14,20 @@ if __name__ == "__main__":
 
     try: 
         hidden_u = []
-        m = 200
-        dim = 2
-        bounds = [1.6, 4]
-        n_x = 10
-        n_y = 30
-        batch_n = n_x*n_y
+        m = 1000
+        dim = 3
+        # bounds = [1.6, 4]
+        bounds = [0.9, 0.9, 0.9]
+        # n_x, n_y
+        n = [10, 30]
+        n = [5, 5, 5]
+        batch_n = np.prod(n)
         buff = None
-        epochs = 5000
+        epochs = 100
         tol = 1e-1
-        # act = tf.math.cos
-        act = 'elu'
-        train = True
+        act = tf.math.cos
+        # act = 'elu'
+        train = False
         if not train:
             lr = m * 0.1
             opt = tf.keras.optimizers.SGD(learning_rate=lr, nesterov=True)
@@ -38,9 +40,10 @@ if __name__ == "__main__":
         init= [0, 2]
         t_end = 20
         eq = 'van_der_pool_2d'
+        eq = 'kevin_3d'
         vf = get_equation(eq)
 
-        params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 'n_x': n_x, 'n_y': n_y, 'batch_n': batch_n, 'epochs': epochs, 'tol': tol,
+        params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 'n_x': n[0], 'n_y': n[1], 'batch_n': batch_n, 'epochs': epochs, 'tol': tol,
                     'activation': str(act), 'train_params': train, 'opt':  str(opt.get_slot_names)[:-27][-3:],  'lr': lr, 'use_true_equation': use_true_equation,
                     'dt': dt, 'init0': init[0], 'init1': init[1], 't_end': t_end}
 
@@ -85,22 +88,23 @@ if __name__ == "__main__":
 
         base_model = build_lyapunov(vf, dim, bounds, m, epochs, tol, path)
 
-        train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n_x, n_y, 
-                                        dim, bounds, batch_n, buff = None, train = True, plot=True)
-        test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n_x, n_y, 
-                                        dim, bounds, batch_n, buff = None, train = False, plot=True)
+        train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
+                                        dim, bounds, batch_n, buff = None, train = True, plot=False)
+        test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n, 
+                                        dim, bounds, batch_n, buff = None, train = False, plot=False)
         my_mlp = base_model.get_regularised_bn_mlp(act, hidden_u, LyapunovModel, opt= opt,  train=train)
         # print(my_mlp.summary())
-        base_model.plot_Layer(20)
+        # base_model.plot_Layer(20)
         all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
         fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
-        Zp, Ze = base_model.plot_solution(20)
-        base_model.plot_Layer(20)
+        # Zp, Ze = base_model.plot_solution(20)
+        base_model.plot_3dsolution(20)
+        # base_model.plot_Layer(20)
 
-        results = {'all_loss_values': all_loss_values, 'all_test_loss_values': all_test_loss_values,
-                        'Zp': Zp, 'Ze': Ze}
+        # results = {'all_loss_values': all_loss_values, 'all_test_loss_values': all_test_loss_values,
+        #                 'Zp': Zp, 'Ze': Ze}
         
-        pd.DataFrame.from_dict(data=results, orient='index').to_csv(path +'/results.csv', header=False)
+        # pd.DataFrame.from_dict(data=results, orient='index').to_csv(path +'/results.csv', header=False)
         
 
         # # shell script that crops all plots
