@@ -4,7 +4,7 @@ import numpy as np
 def get_equation(equation = 'van_der_pool_2d'):
     if equation == 'van_der_pool_2d':
         def vf(x):
-            y = [-x[:,1], x[:,0] - (1-x[:,0]**2)*x[:,1]]
+            y = [-x[:,1], x[:,0] + (1-x[:,0]**2)*x[:,1]]
             return y
 
     elif equation == 'van_der_pool_1d':

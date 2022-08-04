@@ -343,7 +343,7 @@ class build_lyapunov():
         # plt.show()
 
         plt.figure(figsize=(5,8))
-        cp = plt.contour(x,y,Zp, levels=8)
+        cp = plt.contour(x,y,Zp, levels=15)
         plt.quiver(X,Y, new_vf[0], new_vf[1], headwidth=2, headlength=4)
         plt.clabel(cp, inline=True, fontsize=10)
         plt.title('m = {}'.format(self.m))
@@ -427,14 +427,16 @@ class build_lyapunov():
         ax.set_xlabel('x1')
         ax.set_ylabel('x2')
         ax.set_zlabel('x3');
-        print('zp is {}'.format(Zp.shape))
+        print('zp is {}'.format(Zp[:,:,0].shape))
 
-        # # plot values V
-        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
-        #                 cmap='viridis', edgecolor='none')
+        # plot values V
+        print('x is {}'.format(x.shape))
+        print('DT is {}'.format(DT.shape))
+        ax.plot_surface(X[:, :, 0], Y[:, :, 0], Zp[:,:,0], rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none')
+
 
         # my_z = np.reshape(Zp, )
-        ax.contour(X, Y, Z)
 
         # # plot orbital derivative DVf
         # ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
