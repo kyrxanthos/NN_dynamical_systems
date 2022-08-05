@@ -41,7 +41,7 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        for act in [tf.math.cos, tf.math.sin, 'relu', 'elu', 'tanh']:
+        for act in ['relu', 'elu', 'tanh', tf.math.cos]:
             m = 200
             dim = 2
             bounds = [1.6, 4]
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
             train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
                                             dim, bounds, batch_n, buff = None, train = True, plot=False)
-            test_dataset, test_data_points, test_input_RHS = base_model.create_dataset([20, 40], 
+            test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n, 
                                             dim, bounds, batch_n, buff = None, train = False, plot=False)
             my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
             # print(my_mlp.summary())
