@@ -80,23 +80,25 @@ class LyapunovModel(tf.keras.Model):
             
             # Iterate over the batches of the dataset
             # in our case only 1 batch so inly 1 loop here
+            all_batch_loss_values = []
             for _, (x_batch_train, vf_batch_train) in enumerate(train_dataset):
 
                 # call optimization routine
                 loss_value = self.train_step(x_batch_train, vf_batch_train)
-                all_loss_values.append(loss_value.numpy())
+                all_batch_loss_values.append(loss_value.numpy())
 
                 mlv = tf.reduce_max([mlv, loss_value], axis =0)
                 # terminate if L_infty error is sufficiently small
                 if mlv < tol:
-                    # print('Reached minimum tolerance')
                     break
-
+            all_loss_values.append(np.array(all_batch_loss_values).mean())
+            
+            all_batch_loss_test_values = []
             for _, (x_test, vf_test) in enumerate(validation_dataest):
                 test_loss = self.test_step(x_test, vf_test)
-                all_test_loss_values.append(test_loss.numpy())
-            
-            
+                all_batch_loss_test_values.append(test_loss.numpy())
+            all_test_loss_values.append(np.array(all_batch_loss_test_values).mean())
+
 
             if epoch % int(epochs/5) == 0:
                 print('epoch %2s, train loss %10.6f, test loss %10.6f' % (epoch, float(loss_value), float(test_loss)))
@@ -105,7 +107,7 @@ class LyapunovModel(tf.keras.Model):
 
 class build_lyapunov():
 
-    def __init__(self, func, dim, bounds, m, epochs, tol, path) -> None:
+    def __init__(self, func, dim, act, bounds, m, epochs, tol, path) -> None:
         self.func = func
         self.bounds = bounds
         self.dim = dim
@@ -113,6 +115,7 @@ class build_lyapunov():
         self.epochs = epochs
         self.tol = tol
         self.path = path
+        self.act = act
         if not os.path.exists(path + "/Plots"):
             os.makedirs(path + "/Plots")
 
@@ -176,7 +179,7 @@ class build_lyapunov():
 
         return dataset, data_points, input_RHS
 
-    def get_regularised_bn_mlp(self, act, hidden_units, keras_model, opt, train=False):
+    def get_regularised_bn_mlp(self,hidden_units, keras_model, opt, train=False):
         """
         This function is used to build the MLP model. It takes input_shape and hidden_units
         as arguments, which should be used to build the model as described above, using the
@@ -184,7 +187,7 @@ class build_lyapunov():
         Your function should return the model.
         """
         inputs = tf.keras.layers.Input(shape=(self.dim,), name = 'state')
-        h = tf.keras.layers.Dense(self.m, activation=act, 
+        h = tf.keras.layers.Dense(self.m, activation=self.act, 
                                 kernel_initializer=tf.random_normal_initializer(mean=0.0, stddev=1),
                                 bias_initializer= tf.random_uniform_initializer(0, 2*  np.pi), 
                                 trainable=train, name = '1st_hidden')(inputs)
@@ -247,7 +250,7 @@ class build_lyapunov():
         cp2 = plt.contour(x,y, k_nn, levels=10)
         plt.clabel(cp2, inline=True, fontsize=10)
 
-        plt.savefig(self.path + '/Plots/NN_Kernel_m_{}.pdf'.format(self.m))
+        plt.savefig(self.path + '/Plots/NN_Kernel_m_{}_{}.pdf'.format(self.m, str(self.act)))
         plt.clf()
         # plt.show()
 
@@ -262,7 +265,7 @@ class build_lyapunov():
             plt.ylabel("MSE loss")
             plt.legend()
             # plt.xscale('log')
-            plt.savefig(self.path + '/Plots/Loss_Curve_m_{}.pdf'.format(self.m))
+            plt.savefig(self.path + '/Plots/Loss_Curve_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
             # plt.show()
             plt.clf()
         return all_loss_values, all_test_loss_values, self.model
@@ -339,7 +342,7 @@ class build_lyapunov():
         # ax.view_init(-140, 60)
         ax.view_init(10, 60)
 
-        plt.savefig(self.path + '/Plots/van_3dplot_m_{}.pdf'.format(self.m))
+        plt.savefig(self.path + '/Plots/van_3dplot_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
         # plt.show()
 
         plt.figure(figsize=(5,8))
@@ -349,7 +352,7 @@ class build_lyapunov():
         plt.title('m = {}'.format(self.m))
         plt.xlabel('x1')
         plt.ylabel('x2')
-        plt.savefig(self.path + '/Plots/vanpol2_m_{}.pdf'.format(self.m))
+        plt.savefig(self.path + '/Plots/vanpol2_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
 
         # plt.show()
         return Zp, Ze

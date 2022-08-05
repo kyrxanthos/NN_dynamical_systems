@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
         eq = 'van_der_pool_2d'
         # eq = 'kevin_3d'
-        train = False
+        train = True
         path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
 
         def uniquify(path):
@@ -41,8 +41,8 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        for m in [40, 100, 200, 400, 800, 1200, 3200]:
-            # m = 100
+        for act in [tf.math.cos, tf.math.sin, 'relu', 'elu', 'tanh']:
+            m = 200
             dim = 2
             bounds = [1.6, 4]
             # bounds = [0.9, 0.9, 0.9]
@@ -51,9 +51,9 @@ if __name__ == "__main__":
             # n = [5, 5, 5]
             batch_n = np.prod(n)
             buff = None
-            epochs = 10000
+            epochs = 30000
             tol = 1e-1
-            act = tf.math.cos
+            # act = tf.math.cos
             # act = 'elu'
             if not train:
                 lr = m * 0.1
@@ -89,13 +89,13 @@ if __name__ == "__main__":
                     return model.predict(x).T
 
             vf = get_equation(eq)
-            base_model = build_lyapunov(vf, dim, bounds, m, epochs, tol, path)
+            base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path)
 
             train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
                                             dim, bounds, batch_n, buff = None, train = True, plot=False)
-            test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n, 
+            test_dataset, test_data_points, test_input_RHS = base_model.create_dataset([20, 40], 
                                             dim, bounds, batch_n, buff = None, train = False, plot=False)
-            my_mlp = base_model.get_regularised_bn_mlp(act, hidden_u, LyapunovModel, opt= opt,  train=train)
+            my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
             # print(my_mlp.summary())
             base_model.plot_Layer(20)
             all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
             results = {'all_loss_values': all_loss_values, 'all_test_loss_values': all_test_loss_values}
             
-            pd.DataFrame.from_dict(data=results, orient='index').to_csv(
+            pd.DataFrame.from_dict(data=results).to_csv(
                 path +'/results_m_{}_act_{}.csv'.format(m, str(act)), index = True, header=results.keys())
             
 

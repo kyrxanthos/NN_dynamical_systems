@@ -6,9 +6,9 @@ bounds1:4
 n_x:10
 n_y:30
 batch_n:300
-epochs:2000
+epochs:5000
 tol:0.1
-activation:<function cos at 0x7fbe7980a710>
+activation:<function cos at 0x7feb6d7e4710>
 train_params:False
 opt:SGD
 lr:20.0
