@@ -355,7 +355,7 @@ class build_lyapunov():
         plt.savefig(self.path + '/Plots/vanpol2_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
 
         # plt.show()
-        return Zp, Ze
+        # return Zp, Ze
 
     def plot_3dsolution(self, numpoints):
         ###### plot result ######
