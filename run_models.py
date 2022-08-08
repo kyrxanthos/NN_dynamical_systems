@@ -16,8 +16,8 @@ if __name__ == "__main__":
         if not os.path.exists("Experiments"):
             os.makedirs("Experiments")
 
-        eq = 'van_der_pool_2d'
-        # eq = 'kevin_3d'
+        # eq = 'van_der_pool_2d'
+        eq = 'kevin_3d'
         train = False
         path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
 
@@ -41,85 +41,84 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        for m in [40, 80, 160, 320, 640, 1280, 2560, 5120]:
-            print('M IS: {}'.format(m))
-            # m = 200
-            dim = 2
-            bounds = [1.6, 4]
-            # bounds = [0.9, 0.9, 0.9]
-            # n_x, n_y
-            n = [6, 15]
-            n_t = [30, 50]
-            # n = [5, 5, 5]
-            batch_n = np.prod(n)
-            buff = None
-            epochs = 10000
-            tol = 1e-1
-            act = tf.math.cos
-            # act = 'elu'
-            if not train:
-                lr = m * 0.1
-                opt = tf.keras.optimizers.SGD(learning_rate=lr, nesterov=True)
-            else:
-                lr = 0.01
-                opt = tf.keras.optimizers.Adam(lr)
-            use_true_equation = True
-            # time series hyperparameters
-            dt = 0.01
-            init= [0, 2]
-            t_end = 20
+        m = 200
+        dim = 3
+        # bounds = [1.6, 4]
+        bounds = [0.9, 0.9, 0.9]
+        # n_x, n_y
+        n = [6, 15]
+        n_t = [30, 50]
+        n = [5, 5, 5]
+        n_t = n
+        batch_n = np.prod(n)
+        buff = None
+        epochs = 1000
+        tol = 1e-1
+        act = tf.math.cos
+        # act = 'elu'
+        if not train:
+            lr = m * 0.1
+            opt = tf.keras.optimizers.SGD(learning_rate=lr, nesterov=True)
+        else:
+            lr = 0.01
+            opt = tf.keras.optimizers.Adam(lr)
+        use_true_equation = True
+        # time series hyperparameters
+        dt = 0.01
+        init= [0, 2]
+        t_end = 20
 
-            params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 
-                    'n_x': n[0], 'n_y': n[1], 'n_x_t': n_t[0], 'n_y_t': n_t[1], 'batch_n': batch_n, 
-                    'epochs': epochs, 'tol': tol, 'activation': str(act), 'train_params': train, 
-                    'opt':  str(opt.get_slot_names)[:-27][-3:],  'lr': lr, 'use_true_equation': use_true_equation,
-                    'dt': dt, 'init0': init[0], 'init1': init[1], 't_end': t_end}
+        params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 
+                'n_x': n[0], 'n_y': n[1], 'n_x_t': n_t[0], 'n_y_t': n_t[1], 'batch_n': batch_n, 
+                'epochs': epochs, 'tol': tol, 'activation': str(act), 'train_params': train, 
+                'opt':  str(opt.get_slot_names)[:-27][-3:],  'lr': lr, 'use_true_equation': use_true_equation,
+                'dt': dt, 'init0': init[0], 'init1': init[1], 't_end': t_end}
 
 
-            with open(path + "/model_params.txt", 'w') as f: 
-                for key, value in params.items(): 
-                    f.write('%s:%s\n' % (key, value))
+        with open(path + "/model_params.txt", 'w') as f: 
+            for key, value in params.items(): 
+                f.write('%s:%s\n' % (key, value))
 
-            # insert kernel here aswell
+        # insert kernel here aswell
 
-            if not use_true_equation:
-                GE = find_governing_equations(func = get_equation('van_der_pool_1d'), dt= dt)
-                GE.create_time_series(t_end = t_end, init = init)
-                model = GE.find_equations(verbose = True)
+        if not use_true_equation:
+            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), dt= dt)
+            GE.create_time_series(t_end = t_end, init = init)
+            model = GE.find_equations(verbose = True)
 
-                def vf(x):
-                    if type(x) != np.ndarray:
-                        x = x.numpy()
-                    return model.predict(x).T
+            def vf(x):
+                if type(x) != np.ndarray:
+                    x = x.numpy()
+                return model.predict(x).T
 
-            vf = get_equation(eq)
-            base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path)
+        vf = get_equation(eq)
+        base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path)
 
-            train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
-                                            dim, bounds, batch_n, buff = None, train = True, plot=False)
-            test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n_t, 
-                                            dim, bounds, batch_n, buff = None, train = False, plot=False)
-            my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
-            # print(my_mlp.summary())
-            base_model.plot_Layer(20)
-            all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
-            fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
-            base_model.plot_solution(20)
-            # base_model.plot_3dsolution(25)
-            base_model.plot_Layer(20)
+        train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
+                                        dim, bounds, batch_n, buff = None, train = True, plot=False)
+        test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n_t, 
+                                        dim, bounds, batch_n, buff = None, train = False, plot=False)
+        my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
+        # print(my_mlp.summary())
+        # base_model.plot_Layer(20)
+        all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
+        fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
+        # base_model.plot_solution(20)
+        base_model.plot_3dsolution(25)
+        # base_model.plot_Layer(20)
 
-            results = {'all_loss_values': all_loss_values, 
-                    'all_test_loss_values': all_test_loss_values,
-                    'activation': str(act),
-                    'm': m,
-                    'n': batch_n}
-            
-            pd.DataFrame.from_dict(data=results).to_csv(
-                path +'/results_m_{}_act_{}_n_{}.csv'.format(m, str(act), str(batch_n)), index = True, header=results.keys())
-            
+        results = {'all_loss_values': all_loss_values, 
+                'all_test_loss_values': all_test_loss_values,
+                'activation': str(act),
+                'm': m,
+                'n': batch_n}
+        
+        pd.DataFrame.from_dict(data=results).to_csv(
+            path +'/results_m_{}_act_{}_n_{}.csv'.format(m, str(act), str(batch_n)), index = True, header=results.keys())
+        
 
-            # # shell script that crops all plots
-            # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
+        # # shell script that crops all plots
+        # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
 
     except KeyboardInterrupt:
         import shutil

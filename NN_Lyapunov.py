@@ -435,7 +435,7 @@ class build_lyapunov():
         # plot values V
         print('x is {}'.format(x.shape))
         print('DT is {}'.format(DT.shape))
-        ax.plot_surface(X[:, :, 0], Y[:, :, 0], Zp[:,:,0], rstride=1, cstride=1,
+        ax.plot_surface(X[:, :, 0], Y[:, :, 0], Zp[:,:,1], rstride=1, cstride=1,
                         cmap='viridis', edgecolor='none')
 
 
