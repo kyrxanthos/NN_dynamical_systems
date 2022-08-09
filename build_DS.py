@@ -45,7 +45,7 @@ class find_governing_equations():
         if verbose:
             model.print()
             print('Train Model score: %f' %model.score(self.x_train, self.dt))
-            print('Model score: %f' % model.score(x_test, t=self.dt))
+            print('Test Model score: %f' % model.score(x_test, t=self.dt))
         if plot:
             # Predict derivatives using the learned model
             x_dot_test_predicted = model.predict(x_test)

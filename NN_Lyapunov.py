@@ -30,7 +30,7 @@ class LyapunovModel(tf.keras.Model):
             with tf.GradientTape() as tapex:
                 # prepare for evaluation of x-derivative
                 tapex.watch(x_batch_train)
-                logits2 = self(x_batch_train) # (n, 1)
+                logits2 = self(x_batch_train, training = True) # (n, 1)
 
             # evaluate x-derivative
             gradx = tapex.gradient(logits2, x_batch_train) # (n,2)
@@ -122,13 +122,19 @@ class build_lyapunov():
     def create_dataset(self, n, dim, bounds, batch_n, buff = None, train = True, plot=False):
 
         if dim == 2:
-            if train == True:
-                x = np.linspace(-bounds[0], bounds[0], n[0])
-                y = np.linspace(-bounds[1], bounds[1], n[1])
-            else:
-                x = np.random.uniform(-bounds[0], bounds[0], n[0])
-                y = np.random.uniform(-bounds[1], bounds[1], n[1])
+            x = np.linspace(-bounds[0], bounds[0], n[0])
+            y = np.linspace(-bounds[1], bounds[1], n[1])
             X, Y = np.meshgrid(x, y)
+            if train == False:
+                # create some uncertainties to add as random effects to the meshgrid
+                mean = (0, 0)
+                varx, vary = 0.3, 0.3  # adjust these number to suit your need
+                cov = [[varx, 0], [0, vary]]
+                uncerts = np.random.multivariate_normal(mean, cov, (n[1], n[0]))
+                X = X + uncerts[:,:,0]
+                Y = Y + uncerts[:,:,1]
+                np.random.shuffle(X)
+                np.random.shuffle(Y)
             s = X.shape
             data = np.zeros((n[0]*n[1],dim)) 
 
@@ -232,23 +238,27 @@ class build_lyapunov():
         x2 = tf.constant(DT, tf.float32) # (n**2, 2)
         phi_1 = intermediate_output1(x1) # (n**2, m)
         phi_2 = intermediate_output1(x2) # (n**2, m)
-        k_nn = tf.reduce_sum(phi_1*phi_2, axis=1) / self.m # (n**2,) Eq. 22 paper
+        k_nn = tf.reduce_sum(2 * phi_1*phi_2, axis=1) / self.m # (n**2,) Eq. 22 paper
         k_nn = tf.reshape(k_nn, (numpoints, numpoints)) # (n, n)
 
         g_kernel = tfp.math.psd_kernels.ExponentiatedQuadratic()
         kernel_sol = g_kernel.apply(x1, x2) # (n**2,)
         kernel_sol = tf.reshape(kernel_sol, (numpoints,numpoints)) # (n,n)
 
-        plt.figure(figsize=(10, 8))
+        plt.figure(figsize=(10, 6))
         plt.subplot(121)
         plt.title('Actual Gasussian Kernel')
-        cp1 = plt.contour(x,y, kernel_sol, levels=10);
+        cp1 = plt.contour(y,y, kernel_sol, levels=10);
         plt.clabel(cp1, inline=True, fontsize=10)
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
 
         plt.subplot(122)
         plt.title('Neural Network Kernel')
-        cp2 = plt.contour(x,y, k_nn, levels=10)
+        cp2 = plt.contour(y,y, k_nn, levels=10)
         plt.clabel(cp2, inline=True, fontsize=10)
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
 
         plt.savefig(self.path + '/Plots/NN_Kernel_m_{}_{}.pdf'.format(self.m, str(self.act)))
         plt.clf()
@@ -283,6 +293,7 @@ class build_lyapunov():
 
         Ze = np.zeros(s)
         Zp = np.zeros(s)
+        tar = np.zeros(s)
         DT = np.zeros((numpoints**self.dim,self.dim))
 
         # convert mesh into point vector for which the model can be evaluated
@@ -309,41 +320,64 @@ class build_lyapunov():
 
         # compute orbital derivative DVf
         Ee = tf.math.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(DT), dtype=tf.float32)), axis=1)
-
+        target = -tf.square(tf.norm(tDT, ord = 2, axis=1))
+        mse = tf.keras.metrics.mean_squared_error(target, Ee)
         # copy V and DVf values into plottable format
         c = 0
         for i in range(s[0]):
             for j in range(s[1]):
                 Ze[i,j] = Ee[c]
                 Zp[i,j] = Ep[c]
+                tar[i,j] = target[c]
                 c = c+1;
 
 
         # define vector field for plot
         new_vf = np.reshape(np.array(self.func(DT)), (self.dim, numpoints, numpoints))
 
+        ##################################################################################
+
         # define figure
-        fig = plt.figure(figsize=(8,8))
-        ax = plt.axes(projection='3d')
+        fig = plt.figure(figsize=(10,10))
+        # ax = plt.axes(projection='3d')
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
 
         # ax.set_title('m = {}'.format(m))
         ax.set_xlabel('x1')
         ax.set_ylabel('x2')
-        ax.set_zlabel('DV, V');
+        ax.set_zlabel('DV');
 
         # plot values V
-        ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
                         cmap='viridis', edgecolor='none')
+        # # plot values V
+        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        #                 cmap='magma_r', edgecolor='none', alpha = 0.8)
 
         # plot orbital derivative DVf
         ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
 
-        # change angles to see graph more clearly
-        # ax.view_init(-140, 60)
-        ax.view_init(10, 60)
+        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        ax.set_xlabel('x1')
+        ax.set_ylabel('x2')
+        ax.set_zlabel('DV');
+
+        # plot values V
+        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none')
+        # # plot values V
+        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        #                 cmap='magma_r', edgecolor='none')
+
+        # plot orbital derivative DVf
+        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
+
+        ax.view_init(20, 180)
 
         plt.savefig(self.path + '/Plots/van_3dplot_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
         # plt.show()
+
+        ##################################################################################
 
         plt.figure(figsize=(5,8))
         cp = plt.contour(x,y,Zp, levels=15)
@@ -356,6 +390,7 @@ class build_lyapunov():
 
         # plt.show()
         # return Zp, Ze
+        return mse.numpy()
 
     def plot_3dsolution(self, numpoints):
         ###### plot result ######
