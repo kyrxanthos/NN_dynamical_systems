@@ -1,0 +1,21 @@
+eq:simple_2d
+m:200
+dim:2
+bounds0:2
+bounds1:2
+n_x:10
+n_y:30
+n_x_t:50
+n_y_t:50
+batch_n:300
+epochs:500
+tol:0.1
+activation:<function cos at 0x7ffbf67e48c0>
+train_params:False
+opt:SGD
+lr:20.0
+use_true_equation:True
+dt:0.01
+init0:0
+init1:2
+t_end:20

@@ -17,6 +17,7 @@ if __name__ == "__main__":
             os.makedirs("Experiments")
 
         eq = 'van_der_pool_2d'
+        eq = 'simple_2d'
         # eq = 'kevin_3d'
         train = False
         path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
@@ -43,15 +44,15 @@ if __name__ == "__main__":
         hidden_u = []
         m = 200
         dim = 2
-        bounds = [1.6, 4]
+        bounds = [2, 2]
         # bounds = [0.9, 0.9, 0.9]
         # n_x, n_y
-        n = [10, 30]
+        n = [20, 20]
         n_t = [50, 50]
         # n = [5, 5, 5]
         batch_n = np.prod(n)
         buff = None
-        epochs = 5000
+        epochs = 20
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -116,9 +117,16 @@ if __name__ == "__main__":
         pd.DataFrame.from_dict(data=results).to_csv(
             path +'/results_m_{}_act_{}_n_{}.csv'.format(m, str(act), str(batch_n)), index = True, header=results.keys())
         
-
-        # # shell script that crops all plots
+        def strip_str(s):
+            for i in range(len(s)):
+                if s[i] == ' ':
+                    s = s[:i-1] + '\\' + s[i:]
+            return s
+        # shell script that crops all plots
         # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
+        # subprocess.check_call(['./crop_plots_copy.sh', path])
+        subprocess.Popen(['./crop_plots.sh %s' % strip_str(path)], shell = True)
+
 
     except KeyboardInterrupt:
         import shutil
