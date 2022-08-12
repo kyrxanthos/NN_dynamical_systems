@@ -17,9 +17,9 @@ if __name__ == "__main__":
             os.makedirs("Experiments")
 
         eq = 'van_der_pool_2d'
-        eq = 'simple_2d'
-        eq = 'kevin_3d'
-        eq = 'cpa_3d'
+        # eq = 'simple_2d'
+        # eq = 'kevin_3d'
+        # eq = 'cpa_3d'
         train = False
         path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
 
@@ -43,18 +43,18 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        m = 20000
-        dim = 3
-        # bounds = [0.5, 0.5]
-        bounds = [0.5, 0.5, 0.5]
+        m = 10240
+        dim = 2
+        bounds = [1.6, 4]
+        # bounds = [0.5, 0.5, 0.5]
         # n_x, n_y
-        # n = [20, 20]
-        # n_t = [50, 50]
-        n = [5, 5, 5]
-        n_t = n
+        n = [10, 30]
+        n_t = [50, 50]
+        # n = [5, 5, 5]
+        # n_t = n
         batch_n = np.prod(n)
         buff = None
-        epochs = 200
+        epochs = 10000
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -105,8 +105,8 @@ if __name__ == "__main__":
         base_model.plot_Layer(20)
         all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
         fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
-        # mse = base_model.plot_solution(20)
-        mse = base_model.plot_solution3_D(25)
+        mse = base_model.plot_solution(20)
+        # mse = base_model.plot_solution3_D(25)
         # mse = base_model.plot_solution_ND([5,5,5])
         # mse = base_model.pltsol([5,5,5])
 
