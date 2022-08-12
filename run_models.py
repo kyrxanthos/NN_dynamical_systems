@@ -18,7 +18,8 @@ if __name__ == "__main__":
 
         eq = 'van_der_pool_2d'
         eq = 'simple_2d'
-        # eq = 'kevin_3d'
+        eq = 'kevin_3d'
+        eq = 'cpa_3d'
         train = False
         path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
 
@@ -42,17 +43,18 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        m = 200
-        dim = 2
-        bounds = [2, 2]
-        # bounds = [0.9, 0.9, 0.9]
+        m = 20000
+        dim = 3
+        # bounds = [0.5, 0.5]
+        bounds = [0.5, 0.5, 0.5]
         # n_x, n_y
-        n = [20, 20]
-        n_t = [50, 50]
-        # n = [5, 5, 5]
+        # n = [20, 20]
+        # n_t = [50, 50]
+        n = [5, 5, 5]
+        n_t = n
         batch_n = np.prod(n)
         buff = None
-        epochs = 20
+        epochs = 200
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -92,7 +94,7 @@ if __name__ == "__main__":
                 return model.predict(x).T
 
         vf = get_equation(eq)
-        base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path)
+        base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path, func_name = eq)
 
         train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
                                         dim, bounds, batch_n, buff = None, train = True, plot=True)
@@ -103,8 +105,11 @@ if __name__ == "__main__":
         base_model.plot_Layer(20)
         all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
         fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
-        mse = base_model.plot_solution(20)
-        # base_model.plot_3dsolution(25)
+        # mse = base_model.plot_solution(20)
+        mse = base_model.plot_solution3_D(25)
+        # mse = base_model.plot_solution_ND([5,5,5])
+        # mse = base_model.pltsol([5,5,5])
+
         base_model.plot_Layer(20)
 
         results = {'all_loss_values': all_loss_values, 
@@ -125,7 +130,7 @@ if __name__ == "__main__":
         # shell script that crops all plots
         # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
         # subprocess.check_call(['./crop_plots_copy.sh', path])
-        subprocess.Popen(['./crop_plots.sh %s' % strip_str(path)], shell = True)
+        # subprocess.Popen(['./crop_plots.sh %s' % strip_str(path)], shell = True)
 
 
     except KeyboardInterrupt:

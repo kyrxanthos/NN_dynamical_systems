@@ -1,0 +1,21 @@
+eq:kevin_3d
+m:20000
+dim:3
+bounds0:1
+bounds1:1
+n_x:20
+n_y:20
+n_x_t:50
+n_y_t:50
+batch_n:400
+epochs:500
+tol:0.1
+activation:<function cos at 0x7ff25b00ba70>
+train_params:False
+opt:SGD
+lr:2000.0
+use_true_equation:True
+dt:0.01
+init0:0
+init1:2
+t_end:20

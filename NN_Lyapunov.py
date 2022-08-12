@@ -107,7 +107,7 @@ class LyapunovModel(tf.keras.Model):
 
 class build_lyapunov():
 
-    def __init__(self, func, dim, act, bounds, m, epochs, tol, path) -> None:
+    def __init__(self, func, dim, act, bounds, m, epochs, tol, path, func_name) -> None:
         self.func = func
         self.bounds = bounds
         self.dim = dim
@@ -116,57 +116,76 @@ class build_lyapunov():
         self.tol = tol
         self.path = path
         self.act = act
+        self.func_name = func_name
         if not os.path.exists(path + "/Plots"):
             os.makedirs(path + "/Plots")
 
+
     def create_dataset(self, n, dim, bounds, batch_n, buff = None, train = True, plot=False):
 
-        if dim == 2:
-            x = np.linspace(-bounds[0], bounds[0], n[0])
-            y = np.linspace(-bounds[1], bounds[1], n[1])
-            X, Y = np.meshgrid(x, y)
-            if train == False:
-                # create some uncertainties to add as random effects to the meshgrid
-                mean = (0, 0)
-                varx, vary = 0.3, 0.3  # adjust these number to suit your need
-                cov = [[varx, 0], [0, vary]]
-                uncerts = np.random.multivariate_normal(mean, cov, (n[1], n[0]))
-                X = X + uncerts[:,:,0]
-                Y = Y + uncerts[:,:,1]
-                np.random.shuffle(X)
-                np.random.shuffle(Y)
-            s = X.shape
-            data = np.zeros((n[0]*n[1],dim)) 
+        # if dim == 2:
+        # x = np.linspace(-bounds[0], bounds[0], n[0])
+        # y = np.linspace(-bounds[1], bounds[1], n[1])
+        # X, Y = np.meshgrid(x, y)
+        if train == False:
+            # # create some uncertainties to add as random effects to the meshgrid
+            # mean = (0, 0)
+            # varx, vary = 0.3, 0.3  # adjust these number to suit your need
+            # cov = [[varx, 0], [0, vary]]
+            # uncerts = np.random.multivariate_normal(mean, cov, (n[1], n[0]))
+            # X = X + uncerts[:,:,0]
+            # Y = Y + uncerts[:,:,1]
+            # np.random.shuffle(X)
+            # np.random.shuffle(Y)
+            # print(bounds[0], bounds[1],[-bounds[0], -bounds[1]])
+            data = np.random.uniform(low=[ -x for x in bounds], high=bounds, size=(np.prod(n),dim))
+            # print('op')
+        else:
+            ls = np.stack([n, bounds],axis=1)
+            def get_grid_of_points(lms):
+                ls = [np.linspace(-i,i,int(n)) for n, i in lms]
+                mesh_ls = np.meshgrid(*ls)
+                all_mesh = [np.reshape(x, [-1]) for x in mesh_ls]
+                grid_points = np.stack(all_mesh, axis=1)
+                return grid_points
+            data = get_grid_of_points(ls)
 
-            # convert mesh into point vector for which the model can be evaluated
-            c = 0
-            for i in range(s[0]):
-                for j in range(s[1]):
-                    data[c,0] = X[i,j]
-                    data[c,1] = Y[i,j]
-                    c = c+1;
-        elif dim == 3:
-                if train == True:
-                    x = np.linspace(-bounds[0], bounds[0], n[0])
-                    y = np.linspace(-bounds[1], bounds[1], n[1])
-                    z = np.linspace(-bounds[2], bounds[2], n[2])
-                else:
-                    x = np.random.uniform(-bounds[0], bounds[0], n[0])
-                    y = np.random.uniform(-bounds[1], bounds[1], n[1])
-                    z = np.random.uniform(-bounds[1], bounds[1], n[2])
-                X, Y, Z = np.meshgrid(x, y, z)
-                s = X.shape
-                data = np.zeros((n[0]*n[1]*n[2],dim)) 
+            # x = np.linspace(-bounds[0], bounds[0], n[0])
+            # y = np.linspace(-bounds[1], bounds[1], n[1])
+            # X, Y = np.meshgrid(x, y)
 
-                # convert mesh into point vector for which the model can be evaluated
-                c = 0
-                for i in range(s[0]):
-                    for j in range(s[1]):
-                        for k in range(s[2]):
-                            data[c,0] = X[i,j,k]
-                            data[c,1] = Y[i,j,k]
-                            data[c,2] = Z[i,j,k]
-                            c = c+1;
+            # s = X.shape
+            # data = np.zeros((n[0]*n[1],dim)) 
+
+            # # convert mesh into point vector for which the model can be evaluated
+            # c = 0
+            # for i in range(s[0]):
+            #     for j in range(s[1]):
+            #         data[c,0] = X[i,j]
+            #         data[c,1] = Y[i,j]
+            #         c = c+1;
+        # elif dim == 3:
+        #         if train == True:
+        #             x = np.linspace(-bounds[0], bounds[0], n[0])
+        #             y = np.linspace(-bounds[1], bounds[1], n[1])
+        #             z = np.linspace(-bounds[2], bounds[2], n[2])
+        #         else:
+        #             x = np.random.uniform(-bounds[0], bounds[0], n[0])
+        #             y = np.random.uniform(-bounds[1], bounds[1], n[1])
+        #             z = np.random.uniform(-bounds[1], bounds[1], n[2])
+        #         X, Y, Z = np.meshgrid(x, y, z)
+        #         s = X.shape
+        #         data = np.zeros((n[0]*n[1]*n[2],dim)) 
+
+        #         # convert mesh into point vector for which the model can be evaluated
+        #         c = 0
+        #         for i in range(s[0]):
+        #             for j in range(s[1]):
+        #                 for k in range(s[2]):
+        #                     data[c,0] = X[i,j,k]
+        #                     data[c,1] = Y[i,j,k]
+        #                     data[c,2] = Z[i,j,k]
+        #                     c = c+1;
             
         data_points = tf.constant(data, tf.float32) # (n[1], dim)
                         
@@ -374,7 +393,7 @@ class build_lyapunov():
 
         ax.view_init(20, 180)
 
-        plt.savefig(self.path + '/Plots/van_3dplot_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
+        plt.savefig(self.path + '/Plots/{}_plot_m_{}_act_{}.pdf'.format(self.func_name, self.m, str(self.act)))
         # plt.show()
 
         ##################################################################################
@@ -386,42 +405,38 @@ class build_lyapunov():
         plt.title('m = {}'.format(self.m))
         plt.xlabel('x1')
         plt.ylabel('x2')
-        plt.savefig(self.path + '/Plots/vanpol2_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
+        plt.savefig(self.path + '/Plots/{}_m_{}_act_{}.pdf'.format(self.func_name, self.m, str(self.act)))
 
         # plt.show()
         # return Zp, Ze
         return mse.numpy()
 
-    def plot_3dsolution(self, numpoints):
+    def plot_solution3_D(self, numpoints):
         ###### plot result ######
 
         # define plotting range and mesh
         x = np.linspace(-self.bounds[0], self.bounds[0], numpoints)
         y = np.linspace(-self.bounds[1], self.bounds[1], numpoints)
-        z = np.linspace(-self.bounds[2], self.bounds[2], numpoints)
 
-        X, Y, Z = np.meshgrid(x, y, z)
+        X, Y = np.meshgrid(x, y)
 
         s = X.shape
 
         Ze = np.zeros(s)
         Zp = np.zeros(s)
-        DT = np.zeros((numpoints**self.dim,self.dim))
+        tar = np.zeros(s)
+        DT = np.zeros((numpoints**2,self.dim))
 
         # convert mesh into point vector for which the model can be evaluated
         c = 0
         for i in range(s[0]):
             for j in range(s[1]):
-                for k in range(s[2]):
-                    DT[c,0] = X[i,j,k]
-                    DT[c,1] = Y[i,j,k]
-                    DT[c,2] = Z[i,j,k]
-                    c = c+1;
+                DT[c,0] = X[i,j]
+                DT[c,1] = Y[i,j]
+                c = c+1;
 
         # evaluate model (= Lyapunov function values V)
         Ep = self.model.predict(DT)
-        print('Ep shape: {}'.format(Ep.shape))
-
         # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
 
 
@@ -436,55 +451,75 @@ class build_lyapunov():
 
         # compute orbital derivative DVf
         Ee = tf.math.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(DT), dtype=tf.float32)), axis=1)
-
+        target = -tf.square(tf.norm(tDT, ord = 2, axis=1))
+        mse = tf.keras.metrics.mean_squared_error(target, Ee)
         # copy V and DVf values into plottable format
         c = 0
         for i in range(s[0]):
             for j in range(s[1]):
-                for k in range(s[2]):
-                    Ze[i,j,k] = Ee[c]
-                    Zp[i,j,k] = Ep[c]
-                    c = c+1;
+                Ze[i,j] = Ee[c]
+                Zp[i,j] = Ep[c]
+                tar[i,j] = target[c]
+                c = c+1;
 
 
-        # # define vector field for plot
-        # new_vf = np.reshape(np.array(self.func(DT)), (self.dim, numpoints, numpoints))
+        # define vector field for plot
+        new_vf = np.reshape(np.array(self.func(DT)), (self.dim, numpoints, numpoints))
+
+        ##################################################################################
 
         # define figure
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-        # cset = ax.contour(X, Y, Z, cmap=cm.coolwarm)
-        # ax.clabel(cset, fontsize=9, inline=1)
-
-        # plt.show()
-
-        fig = plt.figure(figsize=(8,8))
-        ax = plt.axes(projection='3d')
+        fig = plt.figure(figsize=(10,10))
+        # ax = plt.axes(projection='3d')
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
 
         # ax.set_title('m = {}'.format(m))
         ax.set_xlabel('x1')
         ax.set_ylabel('x2')
-        ax.set_zlabel('x3');
-        print('zp is {}'.format(Zp[:,:,0].shape))
+        ax.set_zlabel('V, DV');
 
+        # # plot values V
+        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none', alpha = 0.7)
         # plot values V
-        print('x is {}'.format(x.shape))
-        print('DT is {}'.format(DT.shape))
-        ax.plot_surface(X[:, :, 0], Y[:, :, 0], Zp[:,:,1], rstride=1, cstride=1,
-                        cmap='viridis', edgecolor='none')
+        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        #                 cmap='viridis', edgecolor='none', alpha = 0.8)
 
+        # plot orbital derivative DVf
+        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
 
-        # my_z = np.reshape(Zp, )
+        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        ax.set_xlabel('x1')
+        ax.set_ylabel('x3')
+        ax.set_zlabel('V, DV');
 
-        # # plot orbital derivative DVf
-        # ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
+        # # # plot values V
+        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none', alpha = 0.7)
+        # plot values V
+        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+        #                 cmap='viridis', edgecolor='none', alpha = 0.8)
 
-        # change angles to see graph more clearly
-        # ax.view_init(-140, 60)
-        ax.view_init(10, 60)
+        # plot orbital derivative DVf
+        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
 
-        plt.savefig(self.path + '/Plots/van_3dplot_m_{}.pdf'.format(self.m))
+        ax.view_init(20, 180)
+
+        plt.savefig(self.path + '/Plots/{}_3dplot_m_{}_act_{}.pdf'.format(self.func, self.m, str(self.act)))
         # plt.show()
 
+        ##################################################################################
+
+        plt.figure(figsize=(8,8))
+        cp = plt.contour(x,y,Zp, levels=15)
+        plt.quiver(X,Y, new_vf[0], new_vf[1], headwidth=2, headlength=4)
+        plt.clabel(cp, inline=True, fontsize=10)
+        plt.title('m = {}'.format(self.m))
+        plt.xlabel('x2')
+        plt.ylabel('x3')
+        plt.savefig(self.path + '/Plots/{}_2_m_{}_act_{}.pdf'.format(self.func, self.m, str(self.act)))
+
         # plt.show()
-        return Zp, Ze
+        # return Zp, Ze
+        return mse.numpy()
+
