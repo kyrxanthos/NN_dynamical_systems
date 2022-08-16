@@ -21,7 +21,8 @@ if __name__ == "__main__":
         # eq = 'kevin_3d'
         # eq = 'cpa_3d'
         train = False
-        path = 'Experiments/Lyapunov_eq_{}_train_{}'.format(eq, train)
+        use_true_equation = False
+        path = 'Experiments/Lyapunov_eq_{}_train_{}_trueeq_{}'.format(eq, train, use_true_equation)
 
         def uniquify(path):
             # filename, extension = os.path.splitext(path)
@@ -40,10 +41,11 @@ if __name__ == "__main__":
             # if the demo_folder directory is not present 
             # then create it.
             os.makedirs(path)
+        print('path is: {}'.format(path))
         
         "Model Hyperparameters"
         hidden_u = []
-        m = 10240
+        m = 200
         dim = 2
         bounds = [1.6, 4]
         # bounds = [0.5, 0.5, 0.5]
@@ -64,11 +66,14 @@ if __name__ == "__main__":
         else:
             lr = 0.01
             opt = tf.keras.optimizers.Adam(lr)
-        use_true_equation = True
+        vf = get_equation(eq)
         # time series hyperparameters
-        dt = 0.01
+        dt = 0.001
         init= [0, 2]
-        t_end = 20
+        t_end = 10
+        freq = 100
+        deg = 5
+        lamda = 0.05
 
         params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 
                 'n_x': n[0], 'n_y': n[1], 'n_x_t': n_t[0], 'n_y_t': n_t[1], 'batch_n': batch_n, 
@@ -84,16 +89,15 @@ if __name__ == "__main__":
         # insert kernel here aswell
 
         if not use_true_equation:
-            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), dt= dt)
+            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), dt= dt, dim = dim, path = path)
             GE.create_time_series(t_end = t_end, init = init)
-            model = GE.find_equations(verbose = True)
+            model = GE.find_equations(freq, deg, lamda, verbose = True, plot = True)
 
             def vf(x):
                 if type(x) != np.ndarray:
                     x = x.numpy()
                 return model.predict(x).T
 
-        vf = get_equation(eq)
         base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path, func_name = eq)
 
         train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 

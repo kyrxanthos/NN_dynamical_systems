@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 import os 
 from mpl_toolkits.mplot3d import Axes3D
+import sys
+import shutil
 # checking if the directory demo_folder 
 # exist or not.
 if not os.path.exists("Plots"):
@@ -14,8 +16,9 @@ if not os.path.exists("Plots"):
 
 
 class LyapunovModel(tf.keras.Model):
-    def __init__(self, **kwargs):
+    def __init__(self, path, **kwargs):
         super(LyapunovModel, self).__init__(**kwargs)
+        self.path = path
 
     def get_optimizer(self, opt):
         self.opt = opt
@@ -86,6 +89,10 @@ class LyapunovModel(tf.keras.Model):
                 # call optimization routine
                 loss_value = self.train_step(x_batch_train, vf_batch_train)
                 all_batch_loss_values.append(loss_value.numpy())
+                if loss_value.numpy() > 1000000:
+                    print('Loss exploded')
+                    shutil.rmtree(self.path)
+                    sys.exit()
 
                 mlv = tf.reduce_max([mlv, loss_value], axis =0)
                 # terminate if L_infty error is sufficiently small
@@ -222,7 +229,7 @@ class build_lyapunov():
         # use bias is false because the derivative of a constant number (bias) is just zero
         outputs = tf.keras.layers.Dense(1, kernel_initializer = tf.zeros_initializer(),activation=None, name = 'output_layer', use_bias=False, trainable=True)(h)
         outputs = outputs / self.m 
-        model = keras_model(inputs=inputs, outputs=outputs)
+        model = keras_model(path = self.path, inputs=inputs, outputs=outputs)
         model.get_optimizer(opt)
         self.model = model
         return model

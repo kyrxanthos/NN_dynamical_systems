@@ -1,0 +1,21 @@
+eq:van_der_pool_2d
+m:200
+dim:2
+bounds0:1.6
+bounds1:4
+n_x:10
+n_y:30
+n_x_t:50
+n_y_t:50
+batch_n:300
+epochs:10000
+tol:0.1
+activation:<function cos at 0x7f92e3825cb0>
+train_params:False
+opt:SGD
+lr:20.0
+use_true_equation:False
+dt:0.001
+init0:0
+init1:2
+t_end:10
