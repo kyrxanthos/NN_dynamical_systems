@@ -56,7 +56,7 @@ if __name__ == "__main__":
         # n_t = n
         batch_n = np.prod(n)
         buff = None
-        epochs = 10000
+        epochs = 1000
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -132,7 +132,7 @@ if __name__ == "__main__":
                     s = s[:i-1] + '\\' + s[i:]
             return s
         # shell script that crops all plots
-        # subprocess.call(['sh', './crop_plots.sh'], stdin = path)
+        # subprocess.call(['sh', './crop_figures.sh'])
         # subprocess.check_call(['./crop_plots_copy.sh', path])
         # subprocess.Popen(['./crop_plots.sh %s' % strip_str(path)], shell = True)
 
