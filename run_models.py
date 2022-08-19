@@ -89,8 +89,9 @@ if __name__ == "__main__":
         # insert kernel here aswell
 
         if not use_true_equation:
-            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), dt= dt, dim = dim, path = path)
-            GE.create_time_series(t_end = t_end, init = init)
+            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
+                                                 dt= dt, t_end=t_end, dim = dim, path = path)
+            GE.create_time_series(init = init)
             model = GE.find_equations(freq, deg, lamda, verbose = True, plot = True)
 
             def vf(x):
