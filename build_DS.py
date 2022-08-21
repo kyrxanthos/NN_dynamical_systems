@@ -212,6 +212,7 @@ class find_governing_equations():
             plt.xlabel('Epoch')
             plt.legend(['Training', 'Validation', 'Validation mae'])
             plt.savefig(self.path + '/Plots/MLP_Loss.pdf')
+            plt.clf()
         self.MLP_model = MLP_model
 
         return MLP_model, MLP_end_time
@@ -253,6 +254,7 @@ class find_governing_equations():
             plt.title('$x_2$')
             plt.legend()
             plt.savefig(self.path + '/Plots/function_evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            plt.clf()
 
 
             plt.figure(figsize=(15,7))
@@ -268,4 +270,5 @@ class find_governing_equations():
             plt.colorbar()
             plt.tight_layout()
             plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            plt.clf()
         return mse_sindy_x[0], mse_sindy_x[1], mse_mlp_x[0], mse_mlp_x[1]

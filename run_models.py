@@ -7,22 +7,26 @@ import os
 import subprocess
 import pandas as pd
 
+np.random.seed(222)
 
 
 
 if __name__ == "__main__":
 
     try: 
-        if not os.path.exists("Experiments"):
-            os.makedirs("Experiments")
+        if not os.path.exists("Experiments2"):
+            os.makedirs("Experiments2")
 
         eq = 'van_der_pool_2d'
         # eq = 'simple_2d'
         # eq = 'kevin_3d'
         # eq = 'cpa_3d'
         train = False
-        use_true_equation = False
-        path = 'Experiments/Lyapunov_eq_{}_train_{}_trueeq_{}'.format(eq, train, use_true_equation)
+        # use_true_equation = False
+        DyS = 'True'
+        DyS = 'SINDy'
+        # DyS = 'MLP'
+        path = 'Experiments2/Lyapunov_eq_{}_train_{}_DyS_{}'.format(eq, train, DyS)
 
         def uniquify(path):
             # filename, extension = os.path.splitext(path)
@@ -56,7 +60,7 @@ if __name__ == "__main__":
         # n_t = n
         batch_n = np.prod(n)
         buff = None
-        epochs = 1000
+        epochs = 10000
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -68,18 +72,19 @@ if __name__ == "__main__":
             opt = tf.keras.optimizers.Adam(lr)
         vf = get_equation(eq)
         # time series hyperparameters
-        dt = 0.001
-        init= [0, 2]
-        t_end = 10
-        freq = 100
-        deg = 5
-        lamda = 0.05
+        dt = 0.02
+        # init= [0, 2]
+        t_end = 20
+        freq = 25
+        deg = 20
+        lamda = 0.1
+        traj = 50
 
         params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 
                 'n_x': n[0], 'n_y': n[1], 'n_x_t': n_t[0], 'n_y_t': n_t[1], 'batch_n': batch_n, 
                 'epochs': epochs, 'tol': tol, 'activation': str(act), 'train_params': train, 
-                'opt':  str(opt.get_slot_names)[:-27][-3:],  'lr': lr, 'use_true_equation': use_true_equation,
-                'dt': dt, 'init0': init[0], 'init1': init[1], 't_end': t_end}
+                'opt':  str(opt.get_slot_names)[:-27][-3:],  'lr': lr, 'DyS': DyS,
+                'dt': dt, 't_end': t_end, 'freq': freq, 'deg': deg, 'lamda': lamda}
 
 
         with open(path + "/model_params.txt", 'w') as f: 
@@ -88,16 +93,44 @@ if __name__ == "__main__":
 
         # insert kernel here aswell
 
-        if not use_true_equation:
+        # if not use_true_equation:
+        #     GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
+        #                                          dt= dt, t_end=t_end, dim = dim, path = path)
+        #     GE.create_time_series(init = init)
+        #     model = GE.find_equations(freq, deg, lamda, verbose = True, plot = True)
+
+        #     def vf(x):
+        #         if type(x) != np.ndarray:
+        #             x = x.numpy()
+        #         return model.predict(x).T
+
+        if DyS == 'SINDy':
             GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
-                                                 dt= dt, t_end=t_end, dim = dim, path = path)
-            GE.create_time_series(init = init)
-            model = GE.find_equations(freq, deg, lamda, verbose = True, plot = True)
+                                            dt= dt, t_end=t_end, dim = dim, n_traj = traj,  path = path, verbose = True)
+            GE.create_time_series(multiple = True)
+            model, end_time = GE.find_equations(freq, deg, lamda, plot = False)
 
             def vf(x):
                 if type(x) != np.ndarray:
                     x = x.numpy()
+                    # print(x.shape)
+                    # assert not np.isnan(x).any()
+                    y = model.predict(x).T
+                    # assert not np.isnan(y).any()
+                    # print(y.shape)
                 return model.predict(x).T
+        
+        if DyS == 'MLP':
+            print('IN MLP...')
+            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
+                                            dt= dt, t_end=t_end, dim = dim, n_traj = traj,  path = path, verbose = True)
+            x, y = GE.create_time_series_MLP(dim)
+            train_dataset, validation_dataset = GE.process_MLP_inputs(x,y)
+            MLP_model, mlp_end_time = GE.find_equations_MLP(train_dataset, validation_dataset)
+            def vf(x):
+                if type(x) != np.ndarray:
+                    x = x.numpy()
+                return MLP_model.predict(x).T
 
         base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path, func_name = eq)
 

@@ -1,0 +1,22 @@
+eq:van_der_pool_2d
+m:200
+dim:2
+bounds0:1.6
+bounds1:4
+n_x:10
+n_y:30
+n_x_t:50
+n_y_t:50
+batch_n:300
+epochs:10000
+tol:0.1
+activation:<function cos at 0x7fbe30f40c20>
+train_params:False
+opt:SGD
+lr:20.0
+DyS:MLP
+dt:0.02
+t_end:20
+freq:25
+deg:80
+lamda:0.1
