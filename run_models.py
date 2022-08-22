@@ -24,7 +24,7 @@ if __name__ == "__main__":
         train = False
         # use_true_equation = False
         DyS = 'True'
-        DyS = 'SINDy'
+        # DyS = 'SINDy'
         # DyS = 'MLP'
         path = 'Experiments2/Lyapunov_eq_{}_train_{}_DyS_{}'.format(eq, train, DyS)
 
@@ -54,8 +54,8 @@ if __name__ == "__main__":
         bounds = [1.6, 4]
         # bounds = [0.5, 0.5, 0.5]
         # n_x, n_y
-        n = [10, 30]
-        n_t = [50, 50]
+        n = [6, 15]
+        n_t = [10, 10]
         # n = [5, 5, 5]
         # n_t = n
         batch_n = np.prod(n)
