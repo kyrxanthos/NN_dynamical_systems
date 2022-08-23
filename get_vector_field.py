@@ -65,6 +65,17 @@ def get_equation(equation = 'van_der_pool_2d'):
             y = [y1, y2, y3]
             return y
 
+    elif equation == 'cpa_3d_1':
+        def vf(t, x):
+            x1 = x[0]
+            x2 = x[1]
+            x3 = x[2] 
+            y1 = -x1 -x2 -x3
+            y2 = np.sin(x1) -2*x2*(1+x1) +x3
+            y3 = x1 *(1+x1) +x2 -2*np.sin(x3)
+            y = [y1, y2, y3]
+            return y
+
 
 
 

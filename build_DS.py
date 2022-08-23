@@ -58,11 +58,16 @@ class find_governing_equations():
     
     def create_time_series(self, multiple = True):
         # initial condition as a list of two entries: [x1, x2]
-        x0_train = [1, -0.5]
+        # x0_train = [1, -0.5]
+        x0_train = np.random.rand(1, self.dim)[0]
         self.x_train = solve_ivp(self.func, self.t_train_span, x0_train,
                         t_eval=self.t_train, **integrator_keywords).y.T
         if multiple == True:
-            bounds = [-1,1]
+            if self.dim == 2:
+                #because van der pol blows up outside these bounds
+                bounds = [-1,1]
+            else:
+                bounds = self.bounds
             x0s = np.random.uniform(low=[ -x for x in bounds], high=bounds, size=(self.n_traj,self.dim))
             self.x_train_multi_sindy = []
             # x0s = np.random.rand(n_trajectories, dim)
@@ -94,6 +99,9 @@ class find_governing_equations():
             forward_diff = np.expand_dims(np.diff(x_train[:,0]) / self.dt, axis=1)
             forward_diff2 = np.expand_dims(np.diff(x_train[:,1]) / self.dt, axis=1)
             y_t = np.concatenate([forward_diff, forward_diff2], axis=1)
+            if self.dim ==3:
+                forward_diff3 = np.expand_dims(np.diff(x_train[:,2]) / self.dt, axis=1)
+                y_t = np.concatenate([forward_diff, forward_diff2, forward_diff3], axis=1)
             y_train_multi.append(y_t)
         # slice first element to match y
         x_train_multi = [i[1:,:] for i in x_train_multi]
@@ -185,22 +193,22 @@ class find_governing_equations():
         act = 'relu'
 
         MLP_model = Sequential([
-            Dense(20, activation=act, input_dim=2, kernel_regularizer = reg),
+            Dense(20, activation=act, input_dim=self.dim, kernel_regularizer = reg),
             Dense(256, activation=act, kernel_regularizer = reg),
             Dense(256, activation=act, kernel_regularizer = reg),
             Dense(512, activation=act, kernel_regularizer = reg),
             Dense(512, activation=act, kernel_regularizer = reg),
-            Dense(512, activation=act, kernel_regularizer = reg),
-            Dense(512, activation=act, kernel_regularizer = reg),
+            # Dense(512, activation=act, kernel_regularizer = reg),
+            # Dense(512, activation=act, kernel_regularizer = reg),
             Dense(256, activation=act, kernel_regularizer = reg),
-            Dense(2)
+            Dense(self.dim)
         ])
         MLP_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
         earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_mae', patience=10)
         print('MLP training...')
         start_time = time.time()
-        history = MLP_model.fit(train_dataset, validation_data=validation_dataset, epochs=15, verbose=self.verbose, callbacks=[earlystopping])
+        history = MLP_model.fit(train_dataset, validation_data=validation_dataset, epochs=50, verbose=self.verbose, callbacks=[earlystopping])
         MLP_end_time = round(time.time() - start_time, 2)
         if plot_loss:
             plt.figure(figsize=(10,7))
@@ -256,19 +264,19 @@ class find_governing_equations():
             plt.savefig(self.path + '/Plots/function_evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
             plt.clf()
 
-
-            plt.figure(figsize=(15,7))
-            plt.subplot(121)
-            plt.imshow(mse_sindy.reshape(n[0],n[1]), cmap='gnuplot')
-            plt.title('SINDy')
-            # plt.legend()
-            plt.colorbar()
-            plt.subplot(122)
-            plt.imshow(mse_mlp.reshape(n[0],n[1]), cmap='gnuplot')
-            plt.title('MLP')
-            # plt.legend()
-            plt.colorbar()
-            plt.tight_layout()
-            plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
-            plt.clf()
+            if self.dim == 2:
+                plt.figure(figsize=(15,7))
+                plt.subplot(121)
+                plt.imshow(mse_sindy.reshape(n[0],n[1]), cmap='gnuplot')
+                plt.title('SINDy')
+                # plt.legend()
+                plt.colorbar()
+                plt.subplot(122)
+                plt.imshow(mse_mlp.reshape(n[0],n[1]), cmap='gnuplot')
+                plt.title('MLP')
+                # plt.legend()
+                plt.colorbar()
+                plt.tight_layout()
+                plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+                plt.clf()
         return mse_sindy_x[0], mse_sindy_x[1], mse_mlp_x[0], mse_mlp_x[1]
