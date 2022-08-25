@@ -1,0 +1,22 @@
+eq:cpa_3d
+m:200
+dim:3
+bounds0:0.5
+bounds1:0.5
+n_x:5
+n_y:5
+n_x_t:5
+n_y_t:5
+batch_n:125
+epochs:1000
+tol:0.1
+activation:<function cos at 0x7fb3bbf40b90>
+train_params:False
+opt:SGD
+lr:20.0
+DyS:MLP
+dt:0.02
+t_end:20
+freq:25
+deg:20
+lamda:0.1

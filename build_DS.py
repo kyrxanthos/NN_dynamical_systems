@@ -96,12 +96,14 @@ class find_governing_equations():
                 x_train_multi.append(x_train_temp)
         # now get finite difference approximations for each time series
         for x_train in x_train_multi:
-            forward_diff = np.expand_dims(np.diff(x_train[:,0]) / self.dt, axis=1)
-            forward_diff2 = np.expand_dims(np.diff(x_train[:,1]) / self.dt, axis=1)
-            y_t = np.concatenate([forward_diff, forward_diff2], axis=1)
-            if self.dim ==3:
-                forward_diff3 = np.expand_dims(np.diff(x_train[:,2]) / self.dt, axis=1)
-                y_t = np.concatenate([forward_diff, forward_diff2, forward_diff3], axis=1)
+            # forward_diff = np.expand_dims(np.diff(x_train[:,0]) / self.dt, axis=1)
+            # forward_diff2 = np.expand_dims(np.diff(x_train[:,1]) / self.dt, axis=1)
+            # y_t = np.concatenate([forward_diff, forward_diff2], axis=1)
+            # if self.dim ==3:
+            #     forward_diff3 = np.expand_dims(np.diff(x_train[:,2]) / self.dt, axis=1)
+            #     y_t = np.concatenate([forward_diff, forward_diff2, forward_diff3], axis=1)
+            fd = [np.expand_dims(np.diff(x_train[:,i]) / self.dt, axis=1) for i in range(self.dim)]
+            y_t = np.concatenate(fd, axis=1)
             y_train_multi.append(y_t)
         # slice first element to match y
         x_train_multi = [i[1:,:] for i in x_train_multi]
@@ -124,7 +126,7 @@ class find_governing_equations():
         diff_method = SmoothedFiniteDifference(smoother_kws={'window_length': 5})
         # opt = ps.optimizers.STLSQ(threshold=0.01, alpha = 0.1, max_iter=500, normalize_columns=True)
         opt = ps.optimizers.STLSQ(threshold=lamda, alpha = 0.1, 
-                        max_iter=300, normalize_columns=False, fit_intercept=False)
+                        max_iter=500, normalize_columns=False, fit_intercept=False)
 
         # up to 3rd degree for van der pol
         # lib = ps.PolynomialLibrary(degree=3).fit(self.x_train)

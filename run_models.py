@@ -20,12 +20,13 @@ if __name__ == "__main__":
         eq = 'van_der_pool_2d'
         # eq = 'simple_2d'
         # eq = 'kevin_3d'
-        # eq = 'cpa_3d'
+        eq = 'cpa_3d'
+        eq = 'complicated_10d'
         train = False
         # use_true_equation = False
-        DyS = 'True'
+        # DyS = 'True'
         # DyS = 'SINDy'
-        # DyS = 'MLP'
+        DyS = 'MLP'
         path = 'Experiments2/Lyapunov_eq_{}_train_{}_DyS_{}'.format(eq, train, DyS)
 
         def uniquify(path):
@@ -50,17 +51,19 @@ if __name__ == "__main__":
         "Model Hyperparameters"
         hidden_u = []
         m = 200
-        dim = 2
+        dim = 10
         bounds = [1.6, 4]
-        # bounds = [0.5, 0.5, 0.5]
+        bounds = [0.5, 0.5, 0.5]
+        bounds = np.ones(dim)
         # n_x, n_y
-        n = [6, 15]
-        n_t = [10, 10]
+        # n = [6, 15]
+        # n_t = [10, 10]
         # n = [5, 5, 5]
-        # n_t = n
+        n = np.ones(dim, dtype=int) *3
+        n_t = n
         batch_n = np.prod(n)
         buff = None
-        epochs = 10000
+        epochs = 1000
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -105,7 +108,7 @@ if __name__ == "__main__":
         #         return model.predict(x).T
 
         if DyS == 'SINDy':
-            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
+            GE = find_governing_equations(func = get_equation('cpa_3d_1'), bounds = bounds,
                                             dt= dt, t_end=t_end, dim = dim, n_traj = traj,  path = path, verbose = True)
             GE.create_time_series(multiple = True)
             model, end_time = GE.find_equations(freq, deg, lamda, plot = False)
@@ -122,11 +125,12 @@ if __name__ == "__main__":
         
         if DyS == 'MLP':
             print('IN MLP...')
-            GE = find_governing_equations(func = get_equation('van_der_pool_1d'), bounds = bounds,
+            GE = find_governing_equations(func = get_equation('complicated_10d_simple'), bounds = bounds,
                                             dt= dt, t_end=t_end, dim = dim, n_traj = traj,  path = path, verbose = True)
             x, y = GE.create_time_series_MLP(dim)
             train_dataset, validation_dataset = GE.process_MLP_inputs(x,y)
             MLP_model, mlp_end_time = GE.find_equations_MLP(train_dataset, validation_dataset)
+            # add here evaluation of the approximation with just the mses (plot =False)
             def vf(x):
                 if type(x) != np.ndarray:
                     x = x.numpy()
@@ -140,15 +144,16 @@ if __name__ == "__main__":
                                         dim, bounds, batch_n, buff = None, train = False, plot=True)
         my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
         # print(my_mlp.summary())
-        base_model.plot_Layer(20)
+        # base_model.plot_Layer(20)
         all_loss_values, all_test_loss_values, fitted_model = base_model.fit(train_dataset, test_dataset, plot=True)
         fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
-        mse = base_model.plot_solution(20)
+        # mse = base_model.plot_solution(20)
         # mse = base_model.plot_solution3_D(25)
+        mse = 0
         # mse = base_model.plot_solution_ND([5,5,5])
         # mse = base_model.pltsol([5,5,5])
 
-        base_model.plot_Layer(20)
+        # base_model.plot_Layer(20)
 
         results = {'all_loss_values': all_loss_values, 
                 'all_test_loss_values': all_test_loss_values,

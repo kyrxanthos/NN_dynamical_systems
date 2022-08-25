@@ -1,0 +1,22 @@
+eq:complicated_10d
+m:200
+dim:10
+bounds0:1.0
+bounds1:1.0
+n_x:3
+n_y:3
+n_x_t:3
+n_y_t:3
+batch_n:59049
+epochs:1000
+tol:0.1
+activation:<function cos at 0x7fabc2e40c20>
+train_params:False
+opt:SGD
+lr:20.0
+DyS:MLP
+dt:0.02
+t_end:20
+freq:25
+deg:20
+lamda:0.1
