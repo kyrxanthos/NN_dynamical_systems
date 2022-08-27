@@ -10,11 +10,11 @@ n_y_t:3
 batch_n:59049
 epochs:100
 tol:0.1
-activation:<function cos at 0x7fd78ef40cb0>
+activation:<function cos at 0x7f81ce726cb0>
 train_params:False
 opt:SGD
 lr:320.0
-DyS:MLP
+DyS:True
 dt:0.02
 t_end:20
 freq:25

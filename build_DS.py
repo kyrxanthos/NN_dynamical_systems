@@ -126,7 +126,7 @@ class find_governing_equations():
         diff_method = SmoothedFiniteDifference(smoother_kws={'window_length': 5})
         # opt = ps.optimizers.STLSQ(threshold=0.01, alpha = 0.1, max_iter=500, normalize_columns=True)
         opt = ps.optimizers.STLSQ(threshold=lamda, alpha = 0.1, 
-                        max_iter=500, normalize_columns=False, fit_intercept=False)
+                        max_iter=2000, normalize_columns=False, fit_intercept=False, verbose=True)
 
         # up to 3rd degree for van der pol
         # lib = ps.PolynomialLibrary(degree=3).fit(self.x_train)
@@ -138,7 +138,7 @@ class find_governing_equations():
                             differentiation_method=diff_method)
         start_time = time.time()
         print('Fitting model...')
-        if self.x_train_multi_sindy is None:
+        if not hasattr(self, 'x_train_multi_sindy'):
             model.fit(self.x_train, t=self.dt, multiple_trajectories=False)
         else:
             model.fit(self.x_train_multi_sindy, t=self.dt, multiple_trajectories=True)
@@ -237,48 +237,61 @@ class find_governing_equations():
             grid_points = np.stack(all_mesh, axis=1)
             return grid_points
         data = get_grid_of_points(ls)
+        # data = np.random.uniform(low=[ -x for x in self.bounds], high=self.bounds, size=(np.prod(n),self.dim))
 
-        y_pred = self.model.predict(data)
-        y_pred_MLP = self.MLP_model.predict(data)
+        if hasattr(self, 'model'):
+            y_pred = self.model.predict(data)
+        else:
+            y_pred = self.MLP_model.predict(data)
         y_true = np.array(vf(data)).T
-        mse_sindy_x = np.mean(np.square(y_true - y_pred), axis=0)
-        mse_mlp_x = np.mean(np.square(y_true - y_pred_MLP), axis=0)
-        mse_sindy = np.mean(np.square(y_true - y_pred), axis=1)
-        mse_mlp = np.mean(np.square(y_true - y_pred_MLP), axis=1)
+        mse_x = np.mean(np.square(y_true - y_pred), axis=0)
+        mse =  np.mean(np.square(y_true - y_pred))
         
         if plot_results:
 
-            plt.figure(figsize=(15,7))
-            plt.suptitle('SINDy test mse $x_1$: {:.3f},  SINDy test mse $x_2$: {:.3f}, MLP test mse $x_1$: {:.3f},  MLP test mse $x_2$: {:.3f}'.format(
-                mse_sindy_x[0],mse_sindy_x[1], mse_mlp_x[0], mse_mlp_x[1]))
-            plt.subplot(121)
-            plt.plot(y_true[:,0], label = 'True')
-            plt.plot(y_pred[:,0], label = 'SINDy Predicted')
-            plt.plot(y_pred_MLP[:,0], label = 'MLP Predicted')
-            plt.title('$x_1$')
-            plt.legend()
-            plt.subplot(122)
-            plt.plot(y_true[:,1], label = 'True')
-            plt.plot(y_pred[:,1], label = 'SINDy Predicted')
-            plt.plot(y_pred_MLP[:,1], label = 'MLP Predicted')
-            plt.title('$x_2$')
-            plt.legend()
-            plt.savefig(self.path + '/Plots/function_evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
-            plt.clf()
+            num = y_true.shape[1]
+            fig, axs = plt.subplots(num // 2 ,2 , sharex=True, figsize=(10, 20))
+            for i in range(num):
+                axs[i % (num // 2), i %2].plot(y_true[:,i], label = 'True')
+                axs[i % (num // 2), i %2].plot(y_pred[:,i], label = 'Predicted')
+                axs[i % (num // 2), i %2].legend(loc = 'upper right')
+                axs[i % (num // 2), i %2].set(xlabel='time', ylabel='$x_{}$'.format(i), 
+                    title = 'mse {:.3g}'.format(mse_x[i]))
+            fig.tight_layout()
+            fig.savefig(self.path + '/Plots/evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            fig.clf()
 
-            if self.dim == 2:
-                plt.figure(figsize=(15,7))
-                plt.subplot(121)
-                plt.imshow(mse_sindy.reshape(n[0],n[1]), cmap='gnuplot')
-                plt.title('SINDy')
-                # plt.legend()
-                plt.colorbar()
-                plt.subplot(122)
-                plt.imshow(mse_mlp.reshape(n[0],n[1]), cmap='gnuplot')
-                plt.title('MLP')
-                # plt.legend()
-                plt.colorbar()
-                plt.tight_layout()
-                plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
-                plt.clf()
-        return mse_sindy_x[0], mse_sindy_x[1], mse_mlp_x[0], mse_mlp_x[1]
+            # plt.figure(figsize=(15,7))
+            # plt.suptitle('SINDy test mse $x_1$: {:.3f},  SINDy test mse $x_2$: {:.3f}, MLP test mse $x_1$: {:.3f},  MLP test mse $x_2$: {:.3f}'.format(
+            #     mse_sindy_x[0],mse_sindy_x[1], mse_mlp_x[0], mse_mlp_x[1]))
+            # plt.subplot(121)
+            # plt.plot(y_true[:,0], label = 'True')
+            # plt.plot(y_pred[:,0], label = 'SINDy Predicted')
+            # plt.plot(y_pred_MLP[:,0], label = 'MLP Predicted')
+            # plt.title('$x_1$')
+            # plt.legend()
+            # plt.subplot(122)
+            # plt.plot(y_true[:,1], label = 'True')
+            # plt.plot(y_pred[:,1], label = 'SINDy Predicted')
+            # plt.plot(y_pred_MLP[:,1], label = 'MLP Predicted')
+            # plt.title('$x_2$')
+            # plt.legend()
+            # plt.savefig(self.path + '/Plots/function_evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            # plt.clf()
+
+            # if self.dim == 2:
+            #     plt.figure(figsize=(15,7))
+            #     plt.subplot(121)
+            #     plt.imshow(mse_sindy.reshape(n[0],n[1]), cmap='gnuplot')
+            #     plt.title('SINDy')
+            #     # plt.legend()
+            #     plt.colorbar()
+            #     plt.subplot(122)
+            #     plt.imshow(mse_mlp.reshape(n[0],n[1]), cmap='gnuplot')
+            #     plt.title('MLP')
+            #     # plt.legend()
+            #     plt.colorbar()
+            #     plt.tight_layout()
+            #     plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            #     plt.clf()
+        return mse_x, mse

@@ -107,7 +107,7 @@ class LyapunovModel(tf.keras.Model):
             all_test_loss_values.append(np.array(all_batch_loss_test_values).mean())
 
 
-            if epoch % int(epochs/5) == 0:
+            if epoch % int(epochs/15) == 0:
                 print('epoch %2s, train loss %10.6f, test loss %10.6f' % (epoch, float(loss_value), float(test_loss)))
                 
         return all_loss_values, all_test_loss_values
@@ -530,3 +530,38 @@ class build_lyapunov():
         # return Zp, Ze
         return mse.numpy()
 
+
+
+    def plot_solution_ND(self, numpoints):
+        ###### plot result ######
+
+        ls = np.stack([numpoints, self.bounds],axis=1)
+
+        def get_grid_of_points(lms):
+            ls = [np.linspace(-i,i,int(n)) for n, i in lms]
+            mesh_ls = np.meshgrid(*ls)
+            all_mesh = [np.reshape(x, [-1]) for x in mesh_ls]
+            grid_points = np.stack(all_mesh, axis=1)
+            return grid_points
+        data = get_grid_of_points(ls)
+
+
+        # evaluate model (= Lyapunov function values V)
+        Ep = self.model.predict(data)
+        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
+
+
+        # convert point vector to tensor for evaluating x-derivative
+        tDT = tf.convert_to_tensor(data, dtype=tf.float32)
+
+        # evaluate gradients DV of Lyapunov function
+        with tf.GradientTape() as tape:
+            tape.watch(tDT)
+            ypm = self.model(tDT)
+            grads = tape.gradient(ypm, tDT)
+
+        # compute orbital derivative DVf
+        Ee = tf.math.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(data), dtype=tf.float32)), axis=1)
+        target = -tf.square(tf.norm(tDT, ord = 2, axis=1))
+        mse = tf.keras.metrics.mean_squared_error(target, Ee)
+        return mse.numpy()

@@ -50,7 +50,7 @@ if __name__ == "__main__":
         
         "Model Hyperparameters"
         hidden_u = []
-        m = 200
+        m = 3200
         dim = 10
         bounds = [1.6, 4]
         bounds = [0.5, 0.5, 0.5]
@@ -79,9 +79,9 @@ if __name__ == "__main__":
         # init= [0, 2]
         t_end = 20
         freq = 25
-        deg = 20
+        deg = 100
         lamda = 0.1
-        traj = 50
+        traj = 500
 
         params = {'eq': eq, 'm': m, 'dim': dim, 'bounds0': bounds[0], 'bounds1': bounds[1], 
                 'n_x': n[0], 'n_y': n[1], 'n_x_t': n_t[0], 'n_y_t': n_t[1], 'batch_n': batch_n, 
@@ -108,10 +108,16 @@ if __name__ == "__main__":
         #         return model.predict(x).T
 
         if DyS == 'SINDy':
-            GE = find_governing_equations(func = get_equation('cpa_3d_1'), bounds = bounds,
+            GE = find_governing_equations(func = get_equation('complicated_10d_simple'), bounds = bounds,
                                             dt= dt, t_end=t_end, dim = dim, n_traj = traj,  path = path, verbose = True)
             GE.create_time_series(multiple = True)
             model, end_time = GE.find_equations(freq, deg, lamda, plot = False)
+            # evaluate now
+            mse_x, mse_a = GE.evaluate_models(vf, n_t, plot_results= True)
+            runs = {'DyS': DyS, 'n_t': n_t, 'dt': dt, 'traj': traj, 'mse_x': mse_x, 'mse': mse_a}
+            
+            pd.DataFrame.from_dict(data=runs).to_csv(
+            path + '/approx_results.csv', index = True, header=runs.keys())
 
             def vf(x):
                 if type(x) != np.ndarray:
@@ -130,6 +136,13 @@ if __name__ == "__main__":
             x, y = GE.create_time_series_MLP(dim)
             train_dataset, validation_dataset = GE.process_MLP_inputs(x,y)
             MLP_model, mlp_end_time = GE.find_equations_MLP(train_dataset, validation_dataset)
+            # evaluate now
+            mse_x, mse_a = GE.evaluate_models(vf, n_t, plot_results= True)
+            runs = {'DyS': DyS, 'n_t': n_t, 'dt': dt, 'traj': traj, 'mse_x': mse_x, 'mse': mse_a}
+            
+            pd.DataFrame.from_dict(data=runs).to_csv(
+            path + '/approx_results.csv', index = True, header=runs.keys())
+            
             # add here evaluation of the approximation with just the mses (plot =False)
             def vf(x):
                 if type(x) != np.ndarray:
@@ -149,10 +162,7 @@ if __name__ == "__main__":
         fitted_model.save(path + '/Lyapunov_{}d_{}m_{}epochs_opt_{}_lr_{}_eq_{}.h5'.format(dim, m,epochs, str(opt.get_slot_names)[:-27][-3:], lr, eq))
         # mse = base_model.plot_solution(20)
         # mse = base_model.plot_solution3_D(25)
-        mse = 0
-        # mse = base_model.plot_solution_ND([5,5,5])
-        # mse = base_model.pltsol([5,5,5])
-
+        mse = base_model.plot_solution_ND(n_t)
         # base_model.plot_Layer(20)
 
         results = {'all_loss_values': all_loss_values, 
