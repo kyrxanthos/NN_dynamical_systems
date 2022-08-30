@@ -107,7 +107,7 @@ class LyapunovModel(tf.keras.Model):
             all_test_loss_values.append(np.array(all_batch_loss_test_values).mean())
 
 
-            if epoch % int(epochs/15) == 0:
+            if epoch % int(epochs/5) == 0:
                 print('epoch %2s, train loss %10.6f, test loss %10.6f' % (epoch, float(loss_value), float(test_loss)))
                 
         return all_loss_values, all_test_loss_values
@@ -565,3 +565,83 @@ class build_lyapunov():
         target = -tf.square(tf.norm(tDT, ord = 2, axis=1))
         mse = tf.keras.metrics.mean_squared_error(target, Ee)
         return mse.numpy()
+
+    def psnd(self, numpoints, g, q):
+        # define plotting range and mesh
+        x = np.linspace(-1, 1, numpoints)
+        y = np.linspace(-1, 1, numpoints)
+
+        X, Y = np.meshgrid(x, y)
+
+        s = X.shape
+
+        Ze = np.zeros(s)
+        Zp = np.zeros(s)
+        DT = np.zeros((numpoints**2,self.dim))
+
+        # convert mesh into point vector for which the model can be evaluated
+        c = 0
+        for i in range(s[0]):
+            for j in range(s[1]):
+
+                # uncomment only one of the next
+                
+                # for first figure
+                DT[c,g] = X[i,j]
+                DT[c,q] = Y[i,j]
+
+                # for second figure 
+        #        DT[c,1] = X[i,j]
+        #        DT[c,7] = Y[i,j]
+
+                c = c+1;
+
+        # evaluate model (= Lyapunov function values V)
+        Ep = self.model.predict(DT)
+
+        # convert point vector to tensor for evaluating x-derivative
+        tDT = tf.convert_to_tensor(DT, dtype=tf.float32)
+
+        # evaluate gradients DV of Lyapunov function
+        with tf.GradientTape() as tape:
+            tape.watch(tDT)
+            ypm = self.model(tDT)
+            grads = tape.gradient(ypm, tDT)
+
+        # compute orbital derivative DVf
+        Ee = tf.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(DT), dtype=tf.float32)), axis=1)
+            
+        # copy V and DVf values into plottable format
+        c = 0
+        for i in range(s[0]):
+            for j in range(s[1]):
+                Ze[i,j] = Ee[c]
+                Zp[i,j] = Ep[c]
+                c = c+1;
+
+        # define figure
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+
+        # uncomment only one of the next
+                
+        # for first figure
+
+        ax.set_xlabel('$x_{}$'.format(g),fontsize=13)
+        ax.set_ylabel('$x_{}$'.format(q),fontsize=13)
+
+        # for second figure
+
+        #ax.set_xlabel('$x_2$',fontsize=20)
+        #ax.set_ylabel('$x_8$',fontsize=20)
+
+        ax.set_zlabel('$DWf, W$',fontsize=13);
+
+        # plot values V
+        ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none')
+
+        # plot orbital derivative DVf
+        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
+
+        plt.savefig(self.path + '/Plots/dww_{}_{}.pdf'.format(g,q))

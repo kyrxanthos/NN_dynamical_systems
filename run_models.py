@@ -1,3 +1,4 @@
+from pickle import FALSE
 from build_DS import find_governing_equations
 from get_vector_field import get_equation
 from NN_Lyapunov import build_lyapunov, LyapunovModel
@@ -20,13 +21,13 @@ if __name__ == "__main__":
         eq = 'van_der_pool_2d'
         # eq = 'simple_2d'
         # eq = 'kevin_3d'
-        eq = 'cpa_3d'
+        # eq = 'cpa_3d'
         eq = 'complicated_10d'
         train = False
         # use_true_equation = False
-        # DyS = 'True'
+        DyS = 'True'
         # DyS = 'SINDy'
-        DyS = 'MLP'
+        # DyS = 'MLP'
         path = 'Experiments2/Lyapunov_eq_{}_train_{}_DyS_{}'.format(eq, train, DyS)
 
         def uniquify(path):
@@ -52,18 +53,18 @@ if __name__ == "__main__":
         hidden_u = []
         m = 3200
         dim = 10
-        bounds = [1.6, 4]
-        bounds = [0.5, 0.5, 0.5]
+        # bounds = [1.6, 4]
+        # bounds = [0.5, 0.5, 0.5]
         bounds = np.ones(dim)
         # n_x, n_y
-        # n = [6, 15]
-        # n_t = [10, 10]
+        n = [6, 15]
+        n_t = [10, 10]
         # n = [5, 5, 5]
         n = np.ones(dim, dtype=int) *3
         n_t = n
-        batch_n = np.prod(n)
+        batch_n = 1024
         buff = None
-        epochs = 1000
+        epochs = 100
         tol = 1e-1
         act = tf.math.cos
         # act = 'elu'
@@ -152,9 +153,9 @@ if __name__ == "__main__":
         base_model = build_lyapunov(vf, dim, act, bounds, m, epochs, tol, path, func_name = eq)
 
         train_dataset, train_data_points, train_input_RHS = base_model.create_dataset(n, 
-                                        dim, bounds, batch_n, buff = None, train = True, plot=True)
+                                        dim, bounds, batch_n, buff = None, train = True, plot=False)
         test_dataset, test_data_points, test_input_RHS = base_model.create_dataset(n_t, 
-                                        dim, bounds, batch_n, buff = None, train = False, plot=True)
+                                        dim, bounds, batch_n, buff = None, train = False, plot=False)
         my_mlp = base_model.get_regularised_bn_mlp(hidden_u, LyapunovModel, opt= opt,  train=train)
         # print(my_mlp.summary())
         # base_model.plot_Layer(20)
@@ -163,6 +164,10 @@ if __name__ == "__main__":
         # mse = base_model.plot_solution(20)
         # mse = base_model.plot_solution3_D(25)
         mse = base_model.plot_solution_ND(n_t)
+        base_model.psnd(30, 1,7)
+        base_model.psnd(30, 2,5)
+        base_model.psnd(30, 4,9)
+        base_model.psnd(30, 3,8)
         # base_model.plot_Layer(20)
 
         results = {'all_loss_values': all_loss_values, 
