@@ -31,7 +31,7 @@ number of datapoints and trajectories for the Van der Pol
 to change from this program. Default parameters run the 2-d Van der Pol equation.
 6. `crop_plots.sh` : Helper executable script that crops all pdf figures within directory 
 
-`Experiments\` includes some experiments shown in the thesis for the model that has access to the true evolution equations.  `Experiments2\` includes the runs for the MLP and SINDy methods (end-to-end models). `Notebooks` are the Jupyter Notebooks used mostly for plotting the runs. `Final_Plots` are the figures included in the thesis.
+`Experiments\` includes some experiments shown in the thesis for the model that has access to the true evolution equations.  `Experiments2\` includes the runs for the MLP and SINDy methods (end-to-end models). `Notebooks` are the Jupyter Notebooks used mostly for plotting the runs. `Final_Plots` are the figures included in the README file.
 
 For running a simple example of the Van der Pol Equation: 
 
@@ -39,7 +39,7 @@ For running a simple example of the Van der Pol Equation:
 python run_models.py
 ```
 
-## Example Results
+## Some Selected Results
 
 ![](Final_Plots/ep-crop.png)
 
