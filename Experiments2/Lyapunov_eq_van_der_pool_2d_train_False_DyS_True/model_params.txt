@@ -3,14 +3,14 @@ m:200
 dim:2
 bounds0:1.6
 bounds1:4
-n_x:10
-n_y:30
-n_x_t:50
-n_y_t:50
-batch_n:300
+n_x:6
+n_y:15
+n_x_t:10
+n_y_t:10
+batch_n:90
 epochs:10000
 tol:0.1
-activation:<function cos at 0x7fb5096b6c20>
+activation:<function cos at 0x7fd2dff65cb0>
 train_params:False
 opt:SGD
 lr:20.0
@@ -18,5 +18,5 @@ DyS:True
 dt:0.02
 t_end:20
 freq:25
-deg:100
+deg:20
 lamda:0.1

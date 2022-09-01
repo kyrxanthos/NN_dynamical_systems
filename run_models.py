@@ -15,8 +15,8 @@ np.random.seed(222)
 if __name__ == "__main__":
 
     try: 
-        if not os.path.exists("Experiments2"):
-            os.makedirs("Experiments2")
+        if not os.path.exists("Experiments"):
+            os.makedirs("Experiments")
 
         eq = 'van_der_pool_2d'
         # eq = 'simple_2d'
