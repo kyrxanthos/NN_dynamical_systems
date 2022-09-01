@@ -41,6 +41,12 @@ python run_models.py
 
 ## Example Results
 
-![](Final_Plots/Kernel_approx-crop.pdf)
+![](Final_Plots/ep-crop.png)
 
-![](Final_Plots/mlp_sindy_mse-crop.pdf)
+![](Final_Plots/dww_5_3-crop.png)
+
+![](Final_Plots/all_trajectories-crop.png)
+
+![](Final_Plots/qqvan_3dplot_m_200_act_cos.png)
+
+![](Final_Plots/mlp_sindy_com-crop.png)
