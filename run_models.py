@@ -58,9 +58,9 @@ if __name__ == "__main__":
         n_t = [10, 10]
         # n = np.ones(dim, dtype=int) *3
         # n_t = n
-        batch_n = 90
+        batch_n = np.prod(n)
         buff = None
-        epochs = 100
+        epochs = 10000
         tol = 1e-1
         # activation function to use
         act = tf.math.cos
