@@ -1,5 +1,7 @@
-# imports 
-from cProfile import label
+"""
+Main program that runs the Lyapunov functions approximation 
+using Neural Networks
+"""
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +10,7 @@ import os
 from mpl_toolkits.mplot3d import Axes3D
 import sys
 import shutil
-# checking if the directory demo_folder 
+# checking if the directory Plots
 # exist or not.
 if not os.path.exists("Plots"):
     os.makedirs("Plots")
@@ -16,11 +18,16 @@ if not os.path.exists("Plots"):
 
 
 class LyapunovModel(tf.keras.Model):
+    """
+    This class defines the custom Tensorflow model used for the Experiments. 
+    It includes custom training and testing steps and custom fitting procedures.
+    """
     def __init__(self, path, **kwargs):
         super(LyapunovModel, self).__init__(**kwargs)
         self.path = path
 
     def get_optimizer(self, opt):
+        # Defined here because @tf.function train_step does not allow self.opt
         self.opt = opt
 
     def train_step(self, x_batch_train, vf_batch_train):
@@ -59,7 +66,6 @@ class LyapunovModel(tf.keras.Model):
         with tf.GradientTape() as tapex:
 
             tapex.watch(x_test)
-            # not sure if training should be false here.
             logits2 = self(x_test, training = False)
 
         # evaluate x-derivative
@@ -72,7 +78,9 @@ class LyapunovModel(tf.keras.Model):
 
 
     def my_fit(self, epochs, tol, train_dataset, validation_dataest):
-
+        """
+        Custom fitting procedure. Only prints 5 messages while the network trains.
+        """
         all_loss_values = []
         all_test_loss_values = []
 
@@ -95,7 +103,6 @@ class LyapunovModel(tf.keras.Model):
                     sys.exit()
 
                 mlv = tf.reduce_max([mlv, loss_value], axis =0)
-                # terminate if L_infty error is sufficiently small
                 if mlv < tol:
                     break
             all_loss_values.append(np.array(all_batch_loss_values).mean())
@@ -113,6 +120,9 @@ class LyapunovModel(tf.keras.Model):
         return all_loss_values, all_test_loss_values
 
 class build_lyapunov():
+    """
+    This class takes any input function and computes the Lyapunov function approximation
+    """
 
     def __init__(self, func, dim, act, bounds, m, epochs, tol, path, func_name) -> None:
         self.func = func
@@ -129,70 +139,21 @@ class build_lyapunov():
 
 
     def create_dataset(self, n, dim, bounds, batch_n, buff = None, train = True, plot=False):
-
-        # if dim == 2:
-        # x = np.linspace(-bounds[0], bounds[0], n[0])
-        # y = np.linspace(-bounds[1], bounds[1], n[1])
-        # X, Y = np.meshgrid(x, y)
+        """
+        Creates the dataset we will be using
+        """
         if train == False:
-            # # create some uncertainties to add as random effects to the meshgrid
-            # mean = (0, 0)
-            # varx, vary = 0.3, 0.3  # adjust these number to suit your need
-            # cov = [[varx, 0], [0, vary]]
-            # uncerts = np.random.multivariate_normal(mean, cov, (n[1], n[0]))
-            # X = X + uncerts[:,:,0]
-            # Y = Y + uncerts[:,:,1]
-            # np.random.shuffle(X)
-            # np.random.shuffle(Y)
-            # print(bounds[0], bounds[1],[-bounds[0], -bounds[1]])
             data = np.random.uniform(low=[ -x for x in bounds], high=bounds, size=(np.prod(n),dim))
-            # print('op')
         else:
             ls = np.stack([n, bounds],axis=1)
             def get_grid_of_points(lms):
+                "helper function that creates grid for any dimensions"
                 ls = [np.linspace(-i,i,int(n)) for n, i in lms]
                 mesh_ls = np.meshgrid(*ls)
                 all_mesh = [np.reshape(x, [-1]) for x in mesh_ls]
                 grid_points = np.stack(all_mesh, axis=1)
                 return grid_points
             data = get_grid_of_points(ls)
-
-            # x = np.linspace(-bounds[0], bounds[0], n[0])
-            # y = np.linspace(-bounds[1], bounds[1], n[1])
-            # X, Y = np.meshgrid(x, y)
-
-            # s = X.shape
-            # data = np.zeros((n[0]*n[1],dim)) 
-
-            # # convert mesh into point vector for which the model can be evaluated
-            # c = 0
-            # for i in range(s[0]):
-            #     for j in range(s[1]):
-            #         data[c,0] = X[i,j]
-            #         data[c,1] = Y[i,j]
-            #         c = c+1;
-        # elif dim == 3:
-        #         if train == True:
-        #             x = np.linspace(-bounds[0], bounds[0], n[0])
-        #             y = np.linspace(-bounds[1], bounds[1], n[1])
-        #             z = np.linspace(-bounds[2], bounds[2], n[2])
-        #         else:
-        #             x = np.random.uniform(-bounds[0], bounds[0], n[0])
-        #             y = np.random.uniform(-bounds[1], bounds[1], n[1])
-        #             z = np.random.uniform(-bounds[1], bounds[1], n[2])
-        #         X, Y, Z = np.meshgrid(x, y, z)
-        #         s = X.shape
-        #         data = np.zeros((n[0]*n[1]*n[2],dim)) 
-
-        #         # convert mesh into point vector for which the model can be evaluated
-        #         c = 0
-        #         for i in range(s[0]):
-        #             for j in range(s[1]):
-        #                 for k in range(s[2]):
-        #                     data[c,0] = X[i,j,k]
-        #                     data[c,1] = Y[i,j,k]
-        #                     data[c,2] = Z[i,j,k]
-        #                     c = c+1;
             
         data_points = tf.constant(data, tf.float32) # (n[1], dim)
                         
@@ -207,7 +168,6 @@ class build_lyapunov():
             plt.scatter(data_points[:,0], data_points[:,1], label = str(train))
             plt.savefig(self.path + '/Plots/dataset_train_{}.pdf'.format(train))
             plt.clf()
-            # plt.show()
 
         return dataset, data_points, input_RHS
 
@@ -245,9 +205,6 @@ class build_lyapunov():
         X, Y = np.meshgrid(x, y)
 
         s = X.shape
-
-        Ze = np.zeros(s)
-        Zp = np.zeros(s)
         DT = np.zeros((numpoints**2,self.dim))
 
         # convert mesh into point vector for which the model can be evaluated
@@ -288,26 +245,25 @@ class build_lyapunov():
 
         plt.savefig(self.path + '/Plots/NN_Kernel_m_{}_{}.pdf'.format(self.m, str(self.act)))
         plt.clf()
-        # plt.show()
 
     def fit(self, train_dataset, test_dataset, plot = False):
+        # uses custom fit from the LyapunovModel class
         all_loss_values, all_test_loss_values = self.model.my_fit(self.epochs, self.tol, train_dataset, test_dataset)
         if plot:
             plt.plot(all_loss_values, label = 'train loss')
-            # plt.xscale('log')
             plt.plot(all_test_loss_values, label = 'validation loss')
             plt.title("Loss vs iterations with m = {}".format(self.m))
             plt.xlabel("Iterations")
             plt.ylabel("MSE loss")
             plt.legend()
-            # plt.xscale('log')
             plt.savefig(self.path + '/Plots/Loss_Curve_m_{}_act_{}.pdf'.format(self.m, str(self.act)))
-            # plt.show()
             plt.clf()
         return all_loss_values, all_test_loss_values, self.model
 
     def plot_solution(self, numpoints):
-        ###### plot result ######
+        """
+        Evaluates the results on a new testing dataset. Only works for 2D.  Returns MSE_{od}
+        """
 
         # define plotting range and mesh
         x = np.linspace(-self.bounds[0], self.bounds[0], numpoints)
@@ -332,9 +288,6 @@ class build_lyapunov():
 
         # evaluate model (= Lyapunov function values V)
         Ep = self.model.predict(DT)
-        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
-
-
         # convert point vector to tensor for evaluating x-derivative
         tDT = tf.convert_to_tensor(DT, dtype=tf.float32)
 
@@ -418,122 +371,11 @@ class build_lyapunov():
         # return Zp, Ze
         return mse.numpy()
 
-    def plot_solution3_D(self, numpoints):
-        ###### plot result ######
-
-        # define plotting range and mesh
-        x = np.linspace(-self.bounds[0], self.bounds[0], numpoints)
-        y = np.linspace(-self.bounds[1], self.bounds[1], numpoints)
-
-        X, Y = np.meshgrid(x, y)
-
-        s = X.shape
-
-        Ze = np.zeros(s)
-        Zp = np.zeros(s)
-        tar = np.zeros(s)
-        DT = np.zeros((numpoints**2,self.dim))
-
-        # convert mesh into point vector for which the model can be evaluated
-        c = 0
-        for i in range(s[0]):
-            for j in range(s[1]):
-                DT[c,0] = X[i,j]
-                DT[c,1] = Y[i,j]
-                c = c+1;
-
-        # evaluate model (= Lyapunov function values V)
-        Ep = self.model.predict(DT)
-        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
-
-
-        # convert point vector to tensor for evaluating x-derivative
-        tDT = tf.convert_to_tensor(DT, dtype=tf.float32)
-
-        # evaluate gradients DV of Lyapunov function
-        with tf.GradientTape() as tape:
-            tape.watch(tDT)
-            ypm = self.model(tDT)
-            grads = tape.gradient(ypm, tDT)
-
-        # compute orbital derivative DVf
-        Ee = tf.math.reduce_sum(grads*tf.transpose(tf.convert_to_tensor(self.func(DT), dtype=tf.float32)), axis=1)
-        target = -tf.square(tf.norm(tDT, ord = 2, axis=1))
-        mse = tf.keras.metrics.mean_squared_error(target, Ee)
-        # copy V and DVf values into plottable format
-        c = 0
-        for i in range(s[0]):
-            for j in range(s[1]):
-                Ze[i,j] = Ee[c]
-                Zp[i,j] = Ep[c]
-                tar[i,j] = target[c]
-                c = c+1;
-
-
-        # define vector field for plot
-        new_vf = np.reshape(np.array(self.func(DT)), (self.dim, numpoints, numpoints))
-
-        ##################################################################################
-
-        # define figure
-        fig = plt.figure(figsize=(10,10))
-        # ax = plt.axes(projection='3d')
-        ax = fig.add_subplot(1, 2, 1, projection='3d')
-
-        # ax.set_title('m = {}'.format(m))
-        ax.set_xlabel('x1')
-        ax.set_ylabel('x2')
-        ax.set_zlabel('V, DV');
-
-        # # plot values V
-        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
-                        cmap='viridis', edgecolor='none', alpha = 0.7)
-        # plot values V
-        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
-        #                 cmap='viridis', edgecolor='none', alpha = 0.8)
-
-        # plot orbital derivative DVf
-        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
-
-        ax = fig.add_subplot(1, 2, 2, projection='3d')
-        ax.set_xlabel('x1')
-        ax.set_ylabel('x3')
-        ax.set_zlabel('V, DV');
-
-        # # # plot values V
-        ax.plot_surface(X, Y, tar, rstride=1, cstride=1,
-                        cmap='viridis', edgecolor='none', alpha = 0.7)
-        # plot values V
-        # ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
-        #                 cmap='viridis', edgecolor='none', alpha = 0.8)
-
-        # plot orbital derivative DVf
-        ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
-
-        ax.view_init(20, 180)
-
-        plt.savefig(self.path + '/Plots/{}_3dplot_m_{}_act_{}.pdf'.format(self.func, self.m, str(self.act)))
-        # plt.show()
-
-        ##################################################################################
-
-        plt.figure(figsize=(8,8))
-        cp = plt.contour(x,y,Zp, levels=15)
-        plt.quiver(X,Y, new_vf[0], new_vf[1], headwidth=2, headlength=4)
-        plt.clabel(cp, inline=True, fontsize=10)
-        plt.title('m = {}'.format(self.m))
-        plt.xlabel('x2')
-        plt.ylabel('x3')
-        plt.savefig(self.path + '/Plots/{}_2_m_{}_act_{}.pdf'.format(self.func, self.m, str(self.act)))
-
-        # plt.show()
-        # return Zp, Ze
-        return mse.numpy()
-
-
 
     def plot_solution_ND(self, numpoints):
-        ###### plot result ######
+        """
+        Evaluates the results on a new testing dataset for any number of dimensions. Returns MSE_{od}
+        """
 
         ls = np.stack([numpoints, self.bounds],axis=1)
 
@@ -544,12 +386,6 @@ class build_lyapunov():
             grid_points = np.stack(all_mesh, axis=1)
             return grid_points
         data = get_grid_of_points(ls)
-
-
-        # evaluate model (= Lyapunov function values V)
-        Ep = self.model.predict(data)
-        # intermediate_output2 = tf.keras.Model(self.model.input, self.model.get_layer('output_layer').output)
-
 
         # convert point vector to tensor for evaluating x-derivative
         tDT = tf.convert_to_tensor(data, dtype=tf.float32)
@@ -567,6 +403,10 @@ class build_lyapunov():
         return mse.numpy()
 
     def psnd(self, numpoints, g, q):
+        """
+        Plots the Lyapunov function and its orbital derivative for any dimension. 
+        Make sure that dimensions g, q are within the dimensions of the equation
+        """
         # define plotting range and mesh
         x = np.linspace(-1, 1, numpoints)
         y = np.linspace(-1, 1, numpoints)
@@ -583,20 +423,11 @@ class build_lyapunov():
         c = 0
         for i in range(s[0]):
             for j in range(s[1]):
-
-                # uncomment only one of the next
-                
-                # for first figure
                 DT[c,g] = X[i,j]
                 DT[c,q] = Y[i,j]
 
-                # for second figure 
-        #        DT[c,1] = X[i,j]
-        #        DT[c,7] = Y[i,j]
-
                 c = c+1;
 
-        # evaluate model (= Lyapunov function values V)
         Ep = self.model.predict(DT)
 
         # convert point vector to tensor for evaluating x-derivative
@@ -622,26 +453,11 @@ class build_lyapunov():
         # define figure
         fig = plt.figure()
         ax = plt.axes(projection='3d')
-
-        # uncomment only one of the next
-                
-        # for first figure
-
         ax.set_xlabel('$x_{}$'.format(g),fontsize=13)
         ax.set_ylabel('$x_{}$'.format(q),fontsize=13)
-
-        # for second figure
-
-        #ax.set_xlabel('$x_2$',fontsize=20)
-        #ax.set_ylabel('$x_8$',fontsize=20)
-
         ax.set_zlabel('$DWf, W$',fontsize=13);
-
-        # plot values V
         ax.plot_surface(X, Y, Zp, rstride=1, cstride=1,
                         cmap='viridis', edgecolor='none')
-
         # plot orbital derivative DVf
         ax.plot_wireframe(X, Y, Ze, rstride=1, cstride=1)
-
         plt.savefig(self.path + '/Plots/dww_{}_{}.pdf'.format(g,q))

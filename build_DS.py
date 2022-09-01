@@ -1,3 +1,9 @@
+"""
+This program simulates the time series from a dynamical system
+and approximates the evolution equations using either SINDy or 
+a Multi-Layer-Perceptron model.
+"""
+
 import numpy as np
 import pysindy as ps
 import matplotlib.pyplot as plt
@@ -12,11 +18,8 @@ from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.models import Sequential
 import time
 import matplotlib
-
 font = {'size'   : 13}
-
 matplotlib.rc('font', **font)
-
 
 # Initialize integrator keywords for solve_ivp to replicate the odeint defaults
 integrator_keywords = {}
@@ -41,7 +44,6 @@ class find_governing_equations():
 
     def re(self, ls, thrsh, num):
         "Helper function for slicing time series"
-        # slice array if it converged
         ct = 0
         for i in range(len(ls)):
             if np.abs(np.sum(ls[i])) < thrsh:
@@ -58,7 +60,6 @@ class find_governing_equations():
     
     def create_time_series(self, multiple = True):
         # initial condition as a list of two entries: [x1, x2]
-        # x0_train = [1, -0.5]
         x0_train = np.random.rand(1, self.dim)[0]
         self.x_train = solve_ivp(self.func, self.t_train_span, x0_train,
                         t_eval=self.t_train, **integrator_keywords).y.T
@@ -70,14 +71,11 @@ class find_governing_equations():
                 bounds = self.bounds
             x0s = np.random.uniform(low=[ -x for x in bounds], high=bounds, size=(self.n_traj,self.dim))
             self.x_train_multi_sindy = []
-            # x0s = np.random.rand(n_trajectories, dim)
-            
+
             for i in range(self.n_traj):
                 x_train_temp = solve_ivp(fun = self.func, t_span=self.t_train_span, 
                                             y0 = x0s[i], t_eval=self.t_train, **integrator_keywords).y.T
                 self.x_train_multi_sindy.append(x_train_temp)
-            
-
 
     def create_time_series_MLP(self, dim):
         x_train_multi = []
@@ -88,20 +86,10 @@ class find_governing_equations():
                 x_train_temp = solve_ivp(fun = self.func, t_span=self.t_train_span, 
                                             y0 = x0s[i], t_eval=self.t_train, **integrator_keywords).y.T
                 x_train_temp = self.re(x_train_temp, 1e-4, 5)
-                # plt.figure()
-                # plt.plot(x_train_temp, label = ['x1', 'x2'])
-                # plt.title('x0: {:.2f}, {:.2f}'.format(x0s[i][0], x0s[i][1]))
-                # plt.legend()
-                                
                 x_train_multi.append(x_train_temp)
+
         # now get finite difference approximations for each time series
         for x_train in x_train_multi:
-            # forward_diff = np.expand_dims(np.diff(x_train[:,0]) / self.dt, axis=1)
-            # forward_diff2 = np.expand_dims(np.diff(x_train[:,1]) / self.dt, axis=1)
-            # y_t = np.concatenate([forward_diff, forward_diff2], axis=1)
-            # if self.dim ==3:
-            #     forward_diff3 = np.expand_dims(np.diff(x_train[:,2]) / self.dt, axis=1)
-            #     y_t = np.concatenate([forward_diff, forward_diff2, forward_diff3], axis=1)
             fd = [np.expand_dims(np.diff(x_train[:,i]) / self.dt, axis=1) for i in range(self.dim)]
             y_t = np.concatenate(fd, axis=1)
             y_train_multi.append(y_t)
@@ -110,7 +98,7 @@ class find_governing_equations():
         return np.concatenate(x_train_multi), np.concatenate(y_train_multi)
     
     def process_MLP_inputs(self, x, y, batch_size = 1024):
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle=True) #, random_state=100)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3, shuffle=True)
         train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
         train_dataset = train_dataset.shuffle(buffer_size=1024)
         train_dataset = train_dataset.batch(batch_size)
@@ -124,12 +112,9 @@ class find_governing_equations():
         poly_lib = ps.PolynomialLibrary(degree=deg)
         identity_lib = ps.IdentityLibrary()
         diff_method = SmoothedFiniteDifference(smoother_kws={'window_length': 5})
-        # opt = ps.optimizers.STLSQ(threshold=0.01, alpha = 0.1, max_iter=500, normalize_columns=True)
         opt = ps.optimizers.STLSQ(threshold=lamda, alpha = 0.1, 
                         max_iter=2000, normalize_columns=False, fit_intercept=False, verbose=True)
 
-        # up to 3rd degree for van der pol
-        # lib = ps.PolynomialLibrary(degree=3).fit(self.x_train)
         lib = ps.feature_library.GeneralizedLibrary([identity_lib, poly_lib, fourier_lib], 
                         library_ensemble=True).fit(self.x_train)
 
@@ -145,7 +130,6 @@ class find_governing_equations():
         end_time = round(time.time() - start_time, 2)
         # Evolve the van der pol equations in time using a different initial condition
         t_test = np.arange(0, 20, self.dt)
-        # x0_test = np.array([0, 1.5])
         x0_test = np.random.rand(1, self.dim)[0]
         t_test_span = (t_test[0], t_test[-1])
         x_test = solve_ivp(self.func, t_test_span, x0_test,
@@ -163,9 +147,6 @@ class find_governing_equations():
             x_dot_test_computed = model.differentiate(x_test, t=self.dt)
 
             fig, axs = plt.subplots(x_test.shape[1], 1, sharex=True, figsize=(7, 9))
-            # fig.suptitle(
-            #     'n: {}, degree: {}, modes: {}, $\lambda$: {}, train score: {:.3f}, test score: {:.3f}'.format(self.t_train.shape[0],
-            #      deg, freq, lamda,model.score(self.x_train, self.dt), model.score(x_test, self.dt) ))
             for i in range(x_test.shape[1]):
                 axs[i].plot(t_test, x_dot_test_computed[:, i],
                             'k', label='numerical derivative')
@@ -200,8 +181,6 @@ class find_governing_equations():
             Dense(256, activation=act, kernel_regularizer = reg),
             Dense(512, activation=act, kernel_regularizer = reg),
             Dense(512, activation=act, kernel_regularizer = reg),
-            # Dense(512, activation=act, kernel_regularizer = reg),
-            # Dense(512, activation=act, kernel_regularizer = reg),
             Dense(256, activation=act, kernel_regularizer = reg),
             Dense(self.dim)
         ])
@@ -216,7 +195,6 @@ class find_governing_equations():
             plt.figure(figsize=(10,7))
             plt.plot(history.history['loss'])
             plt.plot(history.history['val_loss'])
-            # plt.plot(history.history['val_mae'])
             plt.title('Loss vs. epochs')
             plt.ylabel('Loss')
             plt.xlabel('Epoch')
@@ -237,6 +215,7 @@ class find_governing_equations():
             grid_points = np.stack(all_mesh, axis=1)
             return grid_points
         data = get_grid_of_points(ls)
+        # uncomment below if you want to evaluate on a random grid
         # data = np.random.uniform(low=[ -x for x in self.bounds], high=self.bounds, size=(np.prod(n),self.dim))
 
         if hasattr(self, 'model'):
@@ -248,18 +227,21 @@ class find_governing_equations():
         mse =  np.mean(np.square(y_true - y_pred))
         
         if plot_results:
+            # uncomment below for plotting fit (works for >3 dimensions only)
 
-            num = y_true.shape[1]
-            fig, axs = plt.subplots(num // 2 ,2 , sharex=True, figsize=(10, 20))
-            for i in range(num):
-                axs[i % (num // 2), i %2].plot(y_true[:,i], label = 'True')
-                axs[i % (num // 2), i %2].plot(y_pred[:,i], label = 'Predicted')
-                axs[i % (num // 2), i %2].legend(loc = 'upper right')
-                axs[i % (num // 2), i %2].set(xlabel='time', ylabel='$x_{}$'.format(i), 
-                    title = 'mse {:.3g}'.format(mse_x[i]))
-            fig.tight_layout()
-            fig.savefig(self.path + '/Plots/evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
-            fig.clf()
+            # num = y_true.shape[1]
+            # fig, axs = plt.subplots(num // 2 ,2 , sharex=True, figsize=(10, 20))
+            # for i in range(num):
+            #     axs[i % (num // 2), i %2].plot(y_true[:,i], label = 'True')
+            #     axs[i % (num // 2), i %2].plot(y_pred[:,i], label = 'Predicted')
+            #     axs[i % (num // 2), i %2].legend(loc = 'upper right')
+            #     axs[i % (num // 2), i %2].set(xlabel='time', ylabel='$x_{}$'.format(i), 
+            #         title = 'mse {:.3g}'.format(mse_x[i]))
+            # fig.tight_layout()
+            # fig.savefig(self.path + '/Plots/evaluations_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
+            # fig.clf()
+
+            # uncomment below if you want to plot errors (only works for 2d)
 
             # plt.figure(figsize=(15,7))
             # plt.suptitle('SINDy test mse $x_1$: {:.3f},  SINDy test mse $x_2$: {:.3f}, MLP test mse $x_1$: {:.3f},  MLP test mse $x_2$: {:.3f}'.format(
@@ -294,4 +276,5 @@ class find_governing_equations():
             #     plt.tight_layout()
             #     plt.savefig(self.path + '/Plots/function_mse_dt_{}_traj_{}.pdf'.format(self.dt, self.n_traj))
             #     plt.clf()
+            pass
         return mse_x, mse

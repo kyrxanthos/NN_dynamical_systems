@@ -1,5 +1,9 @@
+"""
+This program defines the vector field of equations that
+are used for the experiments performed. Add any new functions
+here if required.
+"""
 import numpy as np
-
     
 def get_equation(equation = 'van_der_pool_2d'):
     if equation == 'van_der_pool_2d':
@@ -75,9 +79,6 @@ def get_equation(equation = 'van_der_pool_2d'):
             y3 = x1 *(1+x1) +x2 -2*np.sin(x3)
             y = [y1, y2, y3]
             return y
-
-
-
 
     elif equation == 'complicated_10d':
         def vf(x):
